@@ -2,8 +2,11 @@
   "name": "leo-racer",
   "version": "0.1.0",
   "private": true,
-  "description": "Leo Racer — a browser driving toy for young children",
+  "description": "Leo Racer \u2014 a browser driving toy for young children",
   "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

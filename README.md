@@ -10,6 +10,8 @@ Parents can add a child's drawing, which appears in the world as a static or mov
 
 ## Quick start
 
+Requires **Node.js 22.13+** (24 LTS recommended; see `.nvmrc`).
+
 ```bash
 npm install
 npx wrangler d1 migrations apply leo-racer-alpha --local   # once: local quota table
