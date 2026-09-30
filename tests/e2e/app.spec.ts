@@ -5,6 +5,8 @@ interface LeoState {
   paused: boolean;
   progress: number;
   lateralOffset: number;
+  speed: number;
+  braking: boolean;
   steering: number;
   manualSteering: number;
   mode: 'manual' | 'autopilot';
@@ -67,6 +69,26 @@ test('keyboard steers the vehicle and takes over from autopilot', async ({ page 
   await page.keyboard.up('KeyA');
   expect(left.manualSteering).toBeLessThan(-0.9);
   expect(left.lateralOffset).toBeLessThan(during.lateralOffset);
+});
+
+test('arrow down brakes to a stop and releasing drives on', async ({ page }) => {
+  await startDriving(page);
+  await page.waitForTimeout(300);
+  await page.keyboard.down('ArrowDown');
+  await page.waitForTimeout(2000);
+  const stopped = await state(page);
+  expect(stopped.braking).toBe(true);
+  expect(stopped.speed).toBe(0);
+  expect(stopped.mode).toBe('manual');
+  await page.waitForTimeout(500);
+  expect((await state(page)).progress).toBe(stopped.progress);
+
+  await page.keyboard.up('ArrowDown');
+  await page.waitForTimeout(1000);
+  const moving = await state(page);
+  expect(moving.braking).toBe(false);
+  expect(moving.speed).toBeGreaterThan(0);
+  expect(moving.progress).toBeGreaterThan(stopped.progress);
 });
 
 test('parent menu opens after holding ESC for ~2 seconds', async ({ page }) => {

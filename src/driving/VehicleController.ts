@@ -1,5 +1,5 @@
 import { CONFIG } from '../game/config';
-import { clamp } from '../input/SteeringState';
+import { approach, clamp } from '../input/SteeringState';
 
 type DrivingConfig = typeof CONFIG.driving;
 
@@ -11,15 +11,18 @@ export interface VehicleState {
   lateralVelocity: number;
   steering: number;
   speed: number;
+  /** True while the brake is held. */
+  braking: boolean;
   /** Visual yaw relative to the road direction, radians. */
   yaw: number;
 }
 
 /**
  * Deliberately simple kinematic model — no physics engine.
- * The vehicle always moves forward; steering only changes lateral offset,
+ * The vehicle cruises forward at a constant speed; steering only changes lateral offset,
  * which is confined by a soft boundary (gentle push-back) and a hard boundary (clamp).
- * Nothing the child does can stop, crash or flip the vehicle.
+ * Holding the brake eases the vehicle to a stop; releasing it always drives on again.
+ * Nothing the child does can crash, flip or strand the vehicle.
  */
 export class VehicleController {
   readonly state: VehicleState;
@@ -31,16 +34,25 @@ export class VehicleController {
       lateralVelocity: 0,
       steering: 0,
       speed: cfg.speed,
+      braking: false,
       yaw: 0,
     };
   }
 
-  update(dtSec: number, steering: number): VehicleState {
+  update(dtSec: number, steering: number, braking = false): VehicleState {
     const s = this.state;
     const dt = clamp(Number.isFinite(dtSec) ? dtSec : 0, 0, 0.1);
     s.steering = clamp(Number.isFinite(steering) ? steering : 0, -1, 1);
-    s.speed = this.cfg.speed;
+    s.braking = braking === true;
+
+    // Gentle braking and gentle pick-up; never reverses.
+    const rate = s.braking ? this.cfg.brakeDecel : this.cfg.acceleration;
+    const target = s.braking ? 0 : this.cfg.speed;
+    s.speed = approach(s.speed, target, rate * dt);
     s.progress += s.speed * dt;
+
+    // Sideways motion scales with forward speed: a stopped bus cannot slide.
+    const speedFactor = s.speed / this.cfg.speed;
 
     // Lateral velocity follows steering smoothly.
     let targetVel = s.steering * this.cfg.maxLateralSpeed;
@@ -54,6 +66,7 @@ export class VehicleController {
       if (Math.sign(targetVel) === side) targetVel *= 1 - depth;
       targetVel -= side * this.cfg.softSpring * (abs - softLimit);
     }
+    targetVel *= speedFactor;
 
     const k = 1 - Math.exp(-this.cfg.lateralResponse * dt);
     s.lateralVelocity += (targetVel - s.lateralVelocity) * k;
@@ -65,7 +78,7 @@ export class VehicleController {
       if (Math.sign(s.lateralVelocity) === Math.sign(s.lateralOffset)) s.lateralVelocity = 0;
     }
 
-    const yawTarget = clamp(Math.atan2(s.lateralVelocity, s.speed) * 1.6, -this.cfg.maxYaw, this.cfg.maxYaw);
+    const yawTarget = clamp(Math.atan2(s.lateralVelocity, Math.max(s.speed, 1)) * 1.6, -this.cfg.maxYaw, this.cfg.maxYaw);
     s.yaw += (yawTarget - s.yaw) * (1 - Math.exp(-8 * dt));
     return s;
   }

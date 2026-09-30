@@ -41,6 +41,7 @@ export class DiagnosticsOverlay {
       `steering axis  ${d.steeringAxis}`,
       `raw steering   ${d.rawSteering.toFixed(3)}`,
       `normalized     ${d.normalizedSteering.toFixed(3)}`,
+      `speed          ${d.speedKmh.toFixed(1)} km/h${d.braking ? ' (braking)' : ''}`,
       ``,
       `mode           ${d.mode} (manual ${Math.round(d.manualWeight * 100)}%)`,
       ``,

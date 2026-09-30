@@ -41,6 +41,7 @@ export class Game {
   private timeSec = 0;
   private autoSteer = 0;
   private mixedSteer = 0;
+  private wasBraking = false;
 
   constructor(
     container: HTMLElement,
@@ -106,11 +107,15 @@ export class Game {
 
     let manual = 0;
     let held = false;
+    let braking = false;
     if (this.driving) {
       this.input.update(dtMs);
       manual = this.input.getSteering();
       held = this.input.isHeldActive();
+      braking = this.input.isBraking();
     }
+    if (braking && !this.wasBraking) this.audio.airBrake();
+    this.wasBraking = braking;
 
     this.autoSteer = this.autopilot.getSteering({
       timeSec: this.timeSec,
@@ -123,7 +128,7 @@ export class Game {
     this.mixedSteer = this.mixer.update(manual, this.autoSteer, now, dtMs, held);
     if (this.mixer.getLastActivityMs() !== before) this.metrics.markInput();
 
-    this.vehicle.update(dt, this.mixedSteer);
+    this.vehicle.update(dt, this.mixedSteer, braking);
 
     // Place the bus on the road.
     const frame = this.world.road.frame(state.progress);
@@ -135,7 +140,7 @@ export class Game {
     this.world.update(state.progress, this.busPosition);
     this.sprites.update(dt, state.progress);
     this.cameraRig.update(dt, state.progress, state.lateralOffset, this.mixedSteer);
-    this.audio.update(dt, this.mixedSteer, this.driving);
+    this.audio.update(dt, this.mixedSteer, state.speed / CONFIG.driving.speed, this.driving);
     if (this.driving) this.metrics.tick(dtMs, this.mixer.getMode(), this.loop.getFps());
   }
 
@@ -152,6 +157,8 @@ export class Game {
       steeringAxis: cal && pad && cal.gamepadId === pad.id ? `${cal.steeringAxis}${cal.invertAxis ? ' (inv)' : ''}` : `${CONFIG.gamepad.defaultAxis} (default)`,
       rawSteering: this.input.gamepad.getRaw(),
       normalizedSteering: this.input.getSteering(),
+      speedKmh: this.vehicle.state.speed * 3.6,
+      braking: this.vehicle.state.braking,
       mode: this.mixer.getMode(),
       manualWeight: this.mixer.getManualWeight(),
       worldChunks: this.world.chunks.activeIndices().join(','),
@@ -169,6 +176,8 @@ export class Game {
       paused: this.paused,
       progress: s.progress,
       lateralOffset: s.lateralOffset,
+      speed: s.speed,
+      braking: s.braking,
       steering: this.mixedSteer,
       manualSteering: this.input.getSteering(),
       mode: this.mixer.getMode(),

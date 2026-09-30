@@ -10,6 +10,8 @@ export interface LiveDiagnostics {
   steeringAxis: string;
   rawSteering: number;
   normalizedSteering: number;
+  speedKmh: number;
+  braking: boolean;
   mode: DriveMode;
   manualWeight: number;
   worldChunks: string;

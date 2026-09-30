@@ -46,6 +46,7 @@ export class KeyboardSteering implements SteeringInput {
 
 const LEFT_CODES = new Set(['ArrowLeft', 'KeyA']);
 const RIGHT_CODES = new Set(['ArrowRight', 'KeyD']);
+const BRAKE_CODES = new Set(['ArrowDown', 'KeyS']);
 const HORN_CODES = new Set(['Space', 'KeyH']);
 
 /** Binds DOM keyboard events to a KeyboardSteering model. */
@@ -68,6 +69,9 @@ export class KeyboardInput implements SteeringInput {
         if (!e.repeat) this.keyEvent = true;
         this.pressed.add(e.code);
         this.sync();
+      } else if (BRAKE_CODES.has(e.code)) {
+        e.preventDefault();
+        this.pressed.add(e.code);
       } else if (HORN_CODES.has(e.code) && !e.repeat) {
         e.preventDefault();
         this.hornListener?.();
@@ -106,6 +110,10 @@ export class KeyboardInput implements SteeringInput {
 
   isHeld(): boolean {
     return this.steering.isHeld();
+  }
+
+  isBraking(): boolean {
+    return [...BRAKE_CODES].some((c) => this.pressed.has(c));
   }
 
   getSteering(): number {

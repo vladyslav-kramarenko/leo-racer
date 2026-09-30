@@ -25,6 +25,7 @@ To try a real provider, copy `.dev.vars.example` to `.dev.vars` and fill it in.
 | Who    | Action                                   | Input                                     |
 | ------ | ---------------------------------------- | ----------------------------------------- |
 | Child  | Steer                                    | `←` `→` or `A` `D`, or a steering wheel / gamepad |
+| Child  | Brake (hold); tail lights flash, release to drive on | `↓` / `S`                    |
 | Child  | Horn                                     | `Space` / `H`, or any wheel button        |
 | Parent | Parent Menu                              | Hold `Esc` ~2 s, or press and hold the top-left corner |
 

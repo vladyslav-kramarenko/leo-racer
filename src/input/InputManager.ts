@@ -42,9 +42,16 @@ export class InputManager implements SteeringInput {
     this.lastGamepad = pad;
 
     // Whichever device was touched most recently owns steering.
+    // Braking never steals steering from a wheel, but it is still recorded as keyboard use.
+    if (this.keyboard.isBraking()) this.used.add('keyboard');
     if (this.keyboard.consumeKeyEvent() || this.keyboard.isHeld()) this.setSource('keyboard');
     else if (padMoved) this.setSource('gamepad');
     else if (this.source === 'none' && this.gamepad.getConnected()) this.source = 'gamepad';
+  }
+
+  /** True while the child holds the brake. */
+  isBraking(): boolean {
+    return this.keyboard.isBraking();
   }
 
   getSteering(): number {
@@ -54,11 +61,11 @@ export class InputManager implements SteeringInput {
   }
 
   /**
-   * A held steering key is always deliberate, so it counts as activity even when
+   * A held steering key or brake is always deliberate, so it counts as activity even when
    * the value has stopped changing. Wheel activity is detected from changes only.
    */
   isHeldActive(): boolean {
-    return this.source === 'keyboard' && this.keyboard.isHeld();
+    return (this.source === 'keyboard' && this.keyboard.isHeld()) || this.keyboard.isBraking();
   }
 
   getSource(): InputSource {

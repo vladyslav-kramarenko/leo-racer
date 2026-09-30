@@ -5,6 +5,7 @@ import type { AudioPreset } from '../world/presets/types';
  * Engine: two detuned oscillators through a low-pass filter.
  * Ambient: soft filtered noise plus occasional gentle construction "clinks".
  * Horn: a friendly two-tone beep.
+ * Air brake: a short hiss of filtered white noise.
  */
 export class AudioManager {
   private ctx: AudioContext | null = null;
@@ -17,6 +18,7 @@ export class AudioManager {
   private nextClink = 3;
   private hornUntil = 0;
   private baseHz = 52;
+  private whiteNoise: AudioBuffer | null = null;
 
   /** Must be called from a user gesture (START DRIVING). */
   start(preset: AudioPreset): void {
@@ -98,10 +100,11 @@ export class AudioManager {
     this.applyVolume();
   }
 
-  update(dt: number, steering: number, running: boolean): void {
+  /** @param speedRatio 0 = stopped (idle), 1 = cruising. */
+  update(dt: number, steering: number, speedRatio: number, running: boolean): void {
     const ctx = this.ctx;
     if (!ctx || !running) return;
-    const pitch = 1 + Math.abs(steering) * 0.06;
+    const pitch = (0.72 + 0.28 * speedRatio) * (1 + Math.abs(steering) * 0.06);
     this.engineOsc.forEach((osc, i) => {
       osc.frequency.setTargetAtTime(this.baseHz * (i === 0 ? 1 : 2.01) * pitch, ctx.currentTime, 0.2);
     });
@@ -144,6 +147,28 @@ export class AudioManager {
     }
   }
 
+  /** "Pssht!" — school-bus air brake. */
+  airBrake(): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.master || !this.enabled) return;
+    this.whiteNoise ??= createWhiteNoise(ctx, 1);
+    const now = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.whiteNoise;
+    const band = ctx.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.setValueAtTime(3200, now);
+    band.frequency.exponentialRampToValueAtTime(1800, now + 0.6);
+    band.Q.value = 0.8;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.22, now + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.65);
+    src.connect(band).connect(g).connect(this.master);
+    src.start(now);
+    src.stop(now + 0.7);
+  }
+
   private clink(): void {
     const ctx = this.ctx;
     if (!ctx || !this.ambientGain) return;
@@ -165,6 +190,13 @@ export class AudioManager {
     const target = this.enabled ? (this.ducked ? 0.25 : 1) : 0;
     this.master.gain.setTargetAtTime(target, this.ctx.currentTime, 0.08);
   }
+}
+
+function createWhiteNoise(ctx: AudioContext, seconds: number): AudioBuffer {
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * seconds, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  return buffer;
 }
 
 function createBrownNoise(ctx: AudioContext, seconds: number): AudioBuffer {

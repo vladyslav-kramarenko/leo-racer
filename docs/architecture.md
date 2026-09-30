@@ -38,7 +38,9 @@ So a new wheel, a new world, or a new AI vendor each touches only one layer.
   - A wheel held still at full lock counts as idle by design, so old-wheel jitter or a resting hand never blocks autopilot.
 - **Autopilot** has a target offset built from two slow sinusoids plus a lean into upcoming curvature.
   It follows that target with a PD controller and a slew-rate limit, so the steering is never random or abrupt.
-- **VehicleController** is a kinematic model with no physics engine. Forward speed is constant at 7.5 m/s (~27 km/h).
+- **VehicleController** is a kinematic model with no physics engine. It cruises at a constant 7.5 m/s (~27 km/h).
+  Holding the brake (`↓`/`S`) eases it to a stop at 6 m/s², and releasing picks up again at 3 m/s².
+  Sideways motion scales with speed, so a stopped bus can't slide. A held brake counts as manual activity, so autopilot won't take over during a stop.
   Beyond `softLimit` (2.4 m), outward motion fades and a spring pulls the bus back. `hardLimit` (3.3 m) is a clamp.
   Garbage input (NaN, huge dt) is sanitised. The bus cannot stop, leave the road, crash or roll over.
 

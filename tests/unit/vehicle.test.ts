@@ -64,6 +64,65 @@ describe('lane limits (impossible to fail)', () => {
   });
 });
 
+describe('braking', () => {
+  const step = 1 / 60;
+  const run = (v: VehicleController, seconds: number, steering: number, braking: boolean) => {
+    for (let t = 0; t < seconds; t += step) v.update(step, steering, braking);
+  };
+
+  it('eases to a full stop, never jumps and never reverses', () => {
+    const v = new VehicleController();
+    let prev = v.state.speed;
+    for (let t = 0; t < 3; t += step) {
+      v.update(step, 0, true);
+      expect(v.state.speed).toBeLessThanOrEqual(prev);
+      expect(prev - v.state.speed).toBeLessThanOrEqual(CONFIG.driving.brakeDecel * step + 1e-9);
+      expect(v.state.speed).toBeGreaterThanOrEqual(0);
+      prev = v.state.speed;
+    }
+    expect(v.state.speed).toBe(0);
+    expect(v.state.braking).toBe(true);
+    const stoppedAt = v.state.progress;
+    run(v, 5, 0, true);
+    expect(v.state.progress).toBe(stoppedAt);
+  });
+
+  it('stops within ~1.5 s from cruising speed', () => {
+    const v = new VehicleController();
+    run(v, 1.5, 0, true);
+    expect(v.state.speed).toBe(0);
+  });
+
+  it('drives on again after release, back to cruising speed', () => {
+    const v = new VehicleController();
+    run(v, 3, 0, true);
+    run(v, 0.5, 0, false);
+    expect(v.state.speed).toBeGreaterThan(0);
+    expect(v.state.braking).toBe(false);
+    run(v, 3, 0, false);
+    expect(v.state.speed).toBe(speed);
+  });
+
+  it('a stopped bus does not slide sideways, even at full lock', () => {
+    const v = new VehicleController();
+    run(v, 3, 0, true);
+    const offset = v.state.lateralOffset;
+    run(v, 5, 1, true);
+    expect(Math.abs(v.state.lateralOffset - offset)).toBeLessThan(0.01);
+    expect(Math.abs(v.state.yaw)).toBeLessThanOrEqual(CONFIG.driving.maxYaw);
+  });
+
+  it('mashing brake and steering for a minute stays inside the corridor', () => {
+    const v = new VehicleController();
+    let maxAbs = 0;
+    for (let t = 0; t < 60; t += step) {
+      v.update(step, Math.sign(Math.sin(t * 5)), Math.sin(t * 1.3) > 0);
+      maxAbs = Math.max(maxAbs, Math.abs(v.state.lateralOffset));
+    }
+    expect(maxAbs).toBeLessThanOrEqual(hardLimit + 1e-9);
+  });
+});
+
 describe('autopilot', () => {
   it('keeps the vehicle near the centre with gentle variation', () => {
     const v = new VehicleController();

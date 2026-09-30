@@ -27,7 +27,13 @@ export const CONFIG = {
 
   driving: {
     /** Constant forward speed in m/s (~27 km/h). */
-    speed: 7.5,
+    speed: 8.3,
+    /** Braking deceleration, m/s² (7.5 m/s → stop in ~1.2 s). */
+    brakeDecel: 6,
+    /** Pick-up after releasing the brake, m/s² (0 → cruise in ~2.5 s). */
+    acceleration: 3,
+    /** Brake-light flash frequency, Hz. Keep below 3 Hz (photosensitivity guidance). */
+    brakeLightHz: 1.25,
     /** Lateral speed at full steering lock, m/s. */
     maxLateralSpeed: 4.2,
     /** How fast lateral velocity follows steering (1/s). */
