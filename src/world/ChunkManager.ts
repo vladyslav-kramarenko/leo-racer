@@ -1,0 +1,169 @@
+import * as THREE from 'three';
+import { CONFIG } from '../game/config';
+import { makeCanvas } from './geometry';
+import type { RoadPreset } from './presets/types';
+import type { RoadGenerator } from './RoadGenerator';
+
+interface RoadChunk {
+  /** Chunk index along the road (chunk covers [index*L, (index+1)*L)). */
+  index: number;
+  slot: number;
+  mesh: THREE.Mesh;
+  positions: THREE.BufferAttribute;
+  uvs: THREE.BufferAttribute;
+}
+
+export type ChunkListener = (slot: number, index: number) => void;
+
+/**
+ * Fixed pool of road chunks. When the bus passes a chunk, that chunk is moved
+ * ahead and its geometry rewritten in place — no new Three.js objects are created.
+ */
+export class ChunkManager {
+  readonly group = new THREE.Group();
+  private readonly chunks: RoadChunk[] = [];
+  private readonly material: THREE.MeshLambertMaterial;
+  private readonly listeners: ChunkListener[] = [];
+  private readonly segs = CONFIG.world.segmentsPerChunk;
+  private readonly length = CONFIG.world.chunkLength;
+  private readonly halfTotal = CONFIG.road.halfWidth + CONFIG.road.shoulderWidth;
+
+  constructor(
+    private readonly road: RoadGenerator,
+    preset: RoadPreset,
+  ) {
+    const texture = createRoadTexture(preset);
+    this.material = new THREE.MeshLambertMaterial({ map: texture });
+
+    const poolSize = CONFIG.world.chunksAhead + CONFIG.world.chunksBehind + 1;
+    for (let slot = 0; slot < poolSize; slot++) {
+      const chunk = this.createChunk(slot);
+      this.chunks.push(chunk);
+      this.group.add(chunk.mesh);
+    }
+  }
+
+  get poolSize(): number {
+    return this.chunks.length;
+  }
+
+  onChunkAssigned(listener: ChunkListener): void {
+    this.listeners.push(listener);
+  }
+
+  /** Initial layout; call after listeners are registered. */
+  reset(progress: number): void {
+    const first = Math.floor(progress / this.length) - CONFIG.world.chunksBehind;
+    this.chunks.forEach((chunk, i) => this.assign(chunk, first + i));
+  }
+
+  update(progress: number): void {
+    const current = Math.floor(progress / this.length);
+    const min = current - CONFIG.world.chunksBehind;
+    const max = current + CONFIG.world.chunksAhead;
+    const present = new Set(this.chunks.map((c) => c.index));
+    for (const chunk of this.chunks) {
+      if (chunk.index >= min && chunk.index <= max) continue;
+      for (let idx = min; idx <= max; idx++) {
+        if (!present.has(idx)) {
+          present.delete(chunk.index);
+          present.add(idx);
+          this.assign(chunk, idx);
+          break;
+        }
+      }
+    }
+  }
+
+  activeIndices(): number[] {
+    return this.chunks.map((c) => c.index).sort((a, b) => a - b);
+  }
+
+  private createChunk(slot: number): RoadChunk {
+    const rows = this.segs + 1;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new THREE.BufferAttribute(new Float32Array(rows * 2 * 3), 3);
+    const normals = new THREE.BufferAttribute(new Float32Array(rows * 2 * 3), 3);
+    const uvs = new THREE.BufferAttribute(new Float32Array(rows * 2 * 2), 2);
+    for (let i = 0; i < rows * 2; i++) normals.setXYZ(i, 0, 1, 0);
+    const index: number[] = [];
+    for (let i = 0; i < this.segs; i++) {
+      const l = i * 2;
+      const r = l + 1;
+      const l1 = l + 2;
+      const r1 = l + 3;
+      index.push(l, r, l1, r, r1, l1);
+    }
+    positions.setUsage(THREE.DynamicDrawUsage);
+    uvs.setUsage(THREE.DynamicDrawUsage);
+    geometry.setAttribute('position', positions);
+    geometry.setAttribute('normal', normals);
+    geometry.setAttribute('uv', uvs);
+    geometry.setIndex(index);
+    const mesh = new THREE.Mesh(geometry, this.material);
+    mesh.matrixAutoUpdate = false;
+    return { index: Number.NaN, slot, mesh, positions, uvs };
+  }
+
+  private assign(chunk: RoadChunk, index: number): void {
+    chunk.index = index;
+    const s0 = index * this.length;
+    const texLen = CONFIG.road.textureLength;
+    const vOffset = ((s0 / texLen) % 1 + 1) % 1;
+    const p = { x: 0, z: 0 };
+    for (let i = 0; i <= this.segs; i++) {
+      const s = s0 + (i / this.segs) * this.length;
+      const v = vOffset + (s - s0) / texLen;
+      this.road.point(s, -this.halfTotal, p);
+      chunk.positions.setXYZ(i * 2, p.x, 0.02, p.z);
+      chunk.uvs.setXY(i * 2, 0, v);
+      this.road.point(s, this.halfTotal, p);
+      chunk.positions.setXYZ(i * 2 + 1, p.x, 0.02, p.z);
+      chunk.uvs.setXY(i * 2 + 1, 1, v);
+    }
+    chunk.positions.needsUpdate = true;
+    chunk.uvs.needsUpdate = true;
+    chunk.mesh.geometry.computeBoundingSphere();
+    for (const listener of this.listeners) listener(chunk.slot, index);
+  }
+}
+
+function createRoadTexture(preset: RoadPreset): THREE.Texture {
+  const W = 256;
+  const H = 512;
+  const { canvas, ctx } = makeCanvas(W, H);
+  const total = (CONFIG.road.halfWidth + CONFIG.road.shoulderWidth) * 2;
+  const px = (m: number) => (m / total) * W;
+  const shoulder = px(CONFIG.road.shoulderWidth);
+
+  ctx.fillStyle = preset.shoulder;
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = preset.asphalt;
+  ctx.fillRect(shoulder, 0, W - shoulder * 2, H);
+
+  // Speckles for a bit of texture.
+  for (let i = 0; i < 1400; i++) {
+    const x = Math.random() * W;
+    const y = Math.random() * H;
+    const onAsphalt = x > shoulder && x < W - shoulder;
+    ctx.fillStyle = onAsphalt ? preset.asphaltSpeckle : 'rgba(120,100,80,0.35)';
+    ctx.fillRect(x, y, 2, 2);
+  }
+
+  const line = Math.max(3, px(0.18));
+  ctx.fillStyle = preset.edgeLine;
+  ctx.fillRect(shoulder + px(0.25), 0, line, H);
+  ctx.fillRect(W - shoulder - px(0.25) - line, 0, line, H);
+
+  // Two dashes per texture repeat.
+  ctx.fillStyle = preset.centerLine;
+  const dash = H / 4;
+  for (let y = 0; y < H; y += dash * 2) ctx.fillRect(W / 2 - line / 2, y, line, dash);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
+}

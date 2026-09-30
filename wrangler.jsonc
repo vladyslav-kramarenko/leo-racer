@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "leo-racer-alpha",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "not_found_handling": "single-page-application",
+    // Only /api/* is handled by the Worker; everything else is a static asset.
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "leo-racer-alpha",
+      // Replace with the id printed by `npx wrangler d1 create leo-racer-alpha`.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "AI_PROVIDER": "mock",
+    "AI_MONTHLY_LIMIT": "20"
+  },
+  "observability": { "enabled": true }
+}
