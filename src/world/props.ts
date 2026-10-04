@@ -20,7 +20,12 @@ export type PartAnim =
   /** Visible for `duty` of each cycle. Keep hz well below 3 (photosensitivity). */
   | { type: 'blink'; hz: number; duty: number }
   /** Visible during [from, to) of a `period`-second cycle (traffic lights). */
-  | { type: 'cycle'; period: number; from: number; to: number };
+  | { type: 'cycle'; period: number; from: number; to: number }
+  /**
+   * Conveyor: moves by `vector` over `period` seconds, then jumps back. Spacing N copies
+   * exactly `vector` apart (and hiding the ends) makes a seamless endless line — gondola cabins.
+   */
+  | { type: 'slide'; vector: [number, number, number]; period: number };
 
 export interface PartModel {
   /** Geometry in part-local space (pivot at the origin). */
@@ -379,6 +384,89 @@ function sailboat(): PropModel {
       ],
     },
   );
+}
+
+/** A thin rod between two points (cables, struts). */
+function rod(a: [number, number, number], b: [number, number, number], r: number, color: string): ColoredPart {
+  const dir = new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+  const len = dir.length();
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+  const e = new THREE.Euler().setFromQuaternion(q);
+  return {
+    geometry: cyl(r, r, len, 5),
+    color,
+    position: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2],
+    rotation: [e.x, e.y, e.z],
+  };
+}
+
+/**
+ * A small mountain with a gondola up its side (Sea to Sky style, simplified).
+ * Faces the road (-Z): base station near the road, summit station up the slope behind.
+ * Cabins glide up one cable and down the other, disappearing into the stations.
+ */
+function gondola(): PropModel {
+  const CABLE = '#3c3f44';
+  const STATION = '#7a5a3e';
+  // Mountain: apex at (0, 40, 30); its surface height at horizontal distance ρ is 40·(1 − ρ/28).
+  const parts: ColoredPart[] = [
+    { geometry: cone(28, 40, 8), color: '#4f7058', position: [0, 20, 30] },
+    { geometry: cone(8.4, 12, 8), color: '#f4f8fb', position: [0, 34.05, 30] },
+    { geometry: ico(3, 0), color: '#8a8b88', position: [-9, 14, 22], scale: [1.4, 0.6, 1] },
+    // Base station with a roof, and the summit lodge.
+    { geometry: rbox(8, 6, 6, 0.3), color: STATION, position: [0, 3, -14] },
+    { geometry: prism(7, 2.4, 9), color: '#3f4a3a', position: [0, 6, -14], rotation: [0, Math.PI / 2, 0] },
+    { geometry: box(5, 2.2, 0.1), color: GLASS, position: [0, 3, -17.05] },
+    { geometry: rbox(6.5, 5, 6.5, 0.3), color: STATION, position: [0, 36.2, 27] },
+    { geometry: prism(7.5, 2, 7), color: '#3f4a3a', position: [0, 38.7, 27], rotation: [0, Math.PI / 2, 0] },
+  ];
+  // Little pines dotted on the slopes.
+  for (const [x, z] of [
+    [-10, 12],
+    [9, 14],
+    [-14, 26],
+    [12, 30],
+    [-6, 40],
+  ]) {
+    const rho = Math.hypot(x, z - 30);
+    const y = 40 * (1 - rho / 28);
+    parts.push({ geometry: cone(1.6, 4, 7), color: PINE_GREEN, position: [x, y + 1.8, z] });
+  }
+
+  // Two cables (up on the left, down on the right), with two pylons.
+  const A: [number, number, number] = [0, 5.4, -12.5];
+  const B: [number, number, number] = [0, 37.3, 26.5];
+  const at = (t: number, x: number): [number, number, number] => [x, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t];
+  for (const x of [-1.4, 1.4]) parts.push(rod(at(0, x), at(1, x), 0.05, CABLE));
+  for (const t of [0.36, 0.7]) {
+    const top = at(t, 0);
+    const rho = Math.abs(30 - top[2]);
+    const ground = rho < 28 ? 40 * (1 - rho / 28) : 0;
+    parts.push(
+      { geometry: cyl(0.25, 0.45, top[1] - ground, 6), color: '#9aa3ab', position: [0, (top[1] + ground) / 2 - 0.2, top[2]] },
+      { geometry: rbox(4, 0.4, 0.5, 0.1), color: '#9aa3ab', position: [0, top[1] - 0.1, top[2]] },
+    );
+  }
+
+  // Cabins: four per cable, spaced exactly one slide-step apart.
+  const N = 4;
+  const step: [number, number, number] = [0, (B[1] - A[1]) / N, (B[2] - A[2]) / N];
+  const cabins = (x: number, from: number, dir: 1 | -1): ColoredPart[] =>
+    Array.from({ length: N }, (_, k): ColoredPart[] => {
+      const p = at(from + (dir * k) / N, x);
+      return [
+        { geometry: box(0.08, 1.3, 0.08), color: CABLE, position: [p[0], p[1] - 0.6, p[2]] },
+        { geometry: rbox(1.5, 1.4, 1.7, 0.35), color: '#d8433b', position: [p[0], p[1] - 1.9, p[2]] },
+        { geometry: box(1.54, 0.5, 1.4), color: GLASS, position: [p[0], p[1] - 1.75, p[2]] },
+      ];
+    }).flat();
+  const period = 9; // ~1.3 m/s along the cable
+  return model(parts, {
+    parts: [
+      part(cabins(-1.4, 0, 1), [0, 0, 0], { type: 'slide', vector: step, period }),
+      part(cabins(1.4, 1, -1), [0, 0, 0], { type: 'slide', vector: [0, -step[1], -step[2]], period }),
+    ],
+  });
 }
 
 // ---------------------------------------------------------------- Farm
@@ -793,6 +881,7 @@ const BUILDERS: Record<PropKind, () => PropModel> = {
   log,
   viewpoint,
   sailboat,
+  gondola,
   fence,
   barn,
   silo,

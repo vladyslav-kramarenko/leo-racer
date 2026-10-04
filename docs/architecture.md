@@ -67,7 +67,8 @@ All tunables live in [`src/game/config.ts`](../src/game/config.ts).
 - **ObjectSpawner** creates one `InstancedMesh` per prop kind, so each kind is one draw call.
   - Every chunk slot owns a fixed range of instances. Placement is deterministic per chunk index.
   - Props can be limited to one side of the road (e.g. no trees in the sea) and can carry per-instance colour tints, e.g. for houses and cars.
-- **Animated parts** are declared as data in the prop library: `spin`, `swing`, `blink` (kept < 3 Hz) and `cycle`.
+- **Animated parts** are declared as data in the prop library: `spin`, `swing`, `blink` (kept < 3 Hz), `cycle` and `slide`.
+  `slide` is a conveyor loop: N copies one step apart, so gondola cabins glide endlessly between the stations.
   Examples: crane jibs, windmill blades, excavator booms, dump-truck beds, tree crowns, barrier beacons, traffic lights.
   Each part is its own `InstancedMesh`; only placed instances are updated each frame.
 - **Ground bands** are coloured strips that follow the road (sea and beach, crop fields, sidewalks). They are rebuilt in place with each chunk.
@@ -85,6 +86,7 @@ All tunables live in [`src/game/config.ts`](../src/game/config.ts).
 - **Guideway** ([`Guideway.ts`](../src/world/Guideway.ts)): an optional elevated rail along the road, with a train that overtakes the bus or comes the other way.
   The beam is one mesh rewritten per chunk slot; columns and train cars are instanced.
 - **Worlds:** Construction, Nature, Farm, City.
+  - Nature is a coastal mountain road. Now and then a small mountain with a gondola appears behind the forest.
   - City is Vancouver-inspired and simplified: glass towers, a seawall along False Creek, a SkyTrain line, cherry blossoms, and landmarks (a geodesic science dome, a sail-roofed pier, a lookout tower, the steam clock).
   - Worlds differ only in preset data. There is no `if (world === …)` anywhere in the engine.
 - Terrain is a single plane that follows the bus while its texture stays fixed in world space.

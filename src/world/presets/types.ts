@@ -23,6 +23,7 @@ export type PropKind =
   | 'log'
   | 'viewpoint'
   | 'sailboat'
+  | 'gondola'
   // Farm
   | 'fence'
   | 'barn'

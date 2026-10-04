@@ -56,6 +56,8 @@ export const nature: WorldPreset = {
       { kind: 'log', weight: 1, minDistance: 2, maxDistance: 10, scale: [0.9, 1.2], maxPerChunk: 1, side: 'right' },
       { kind: 'viewpoint', weight: 0.6, minDistance: 0.8, maxDistance: 1.4, scale: [1, 1], maxPerChunk: 1, facing: 'traffic', side: 'left' },
       { kind: 'sailboat', weight: 1.2, minDistance: 25, maxDistance: 70, scale: [1, 1.4], maxPerChunk: 1, side: 'left' },
+      // Now and then: a mountain with a gondola, set back behind the forest.
+      { kind: 'gondola', weight: 1, minDistance: 30, maxDistance: 34, scale: [1, 1], maxPerChunk: 1, facing: 'road', side: 'right', every: { chunks: 13, offset: 4 } },
     ],
   },
   traffic: { enabled: true, vehicles: ['car', 'camper', 'pickup', 'van'] },
