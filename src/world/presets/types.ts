@@ -149,6 +149,8 @@ export interface AudioPreset {
 export interface WorldPreset {
   id: string;
   name: string;
+  /** Picture for the Parent Menu world picker (served from /public). */
+  thumbnail?: string;
   sky: SkyPreset;
   terrain: TerrainPreset;
   road: RoadPreset;

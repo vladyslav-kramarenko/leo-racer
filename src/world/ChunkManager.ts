@@ -159,6 +159,17 @@ export class ChunkManager {
     return { mesh, positions };
   }
 
+  /**
+   * On the inside of a curve, offsets beyond the curve radius fold the strip over itself
+   * (dark, inside-out triangles). Clamp them just short of the radius.
+   */
+  private safeOffset(s: number, d: number): number {
+    const k = this.road.curvature(s);
+    if (Math.sign(d) !== Math.sign(k) || k === 0) return d;
+    const max = 0.85 / Math.abs(k);
+    return Math.abs(d) > max ? Math.sign(d) * max : d;
+  }
+
   private assign(chunk: RoadChunk, index: number): void {
     chunk.index = index;
     const s0 = index * this.length;
@@ -185,9 +196,9 @@ export class ChunkManager {
         const base = k * rows * 2;
         for (let i = 0; i <= this.segs; i++) {
           const s = s0 + (i / this.segs) * this.length;
-          this.road.point(s, strip.inner, p);
+          this.road.point(s, this.safeOffset(s, strip.inner), p);
           chunk.bands!.positions.setXYZ(base + i * 2, p.x, strip.y, p.z);
-          this.road.point(s, strip.outer, p);
+          this.road.point(s, this.safeOffset(s, strip.outer), p);
           chunk.bands!.positions.setXYZ(base + i * 2 + 1, p.x, strip.y, p.z);
         }
       });

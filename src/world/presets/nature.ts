@@ -1,9 +1,10 @@
 import type { WorldPreset } from './types';
 
-/** Sea-to-Sky inspired (not geographically exact): sea on the left, forest and mountains on the right. */
+/** Coastal mountain road: sea on the left, forest and snowy mountains on the right. */
 export const nature: WorldPreset = {
   id: 'nature',
-  name: 'Nature (Sea to Sky)',
+  name: 'Nature',
+  thumbnail: '/worlds/nature.jpg',
   sky: {
     top: '#4f9fe8',
     horizon: '#dcefff',

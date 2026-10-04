@@ -15,7 +15,7 @@ Leo Racer is a browser driving toy for children aged 2–4.
 
 **Works with a keyboard or a real steering wheel. No hardware required.**
 
-| Construction | Nature (Sea to Sky) |
+| Construction | Nature |
 | --- | --- |
 | ![Construction world](docs/images/construction.jpg) | ![Nature world](docs/images/nature.jpg) |
 | **Farm** | **City** |
@@ -27,7 +27,7 @@ Leo Racer is a browser driving toy for children aged 2–4.
 
 ## Features
 
-- **Four worlds:** Construction, Nature (Sea to Sky), Farm and City. All are endless and pure data presets on one engine. Props are animated: cranes turn, windmills spin, traffic lights cycle.
+- **Four worlds:** Construction, Nature, Farm and City. All are endless and pure data presets on one engine. Props are animated: cranes turn, windmills spin, traffic lights cycle.
 - **Many inputs:**
   - Keyboard steering, brake and horn.
   - Any gamepad or steering wheel via the Gamepad API, with a calibration wizard.

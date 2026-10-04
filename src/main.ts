@@ -124,7 +124,7 @@ async function main(): Promise<void> {
           return false;
         }
       },
-      worlds: () => listPresets().map((p) => ({ id: p.id, name: p.name })),
+      worlds: () => listPresets().map((p) => ({ id: p.id, name: p.name, thumbnail: p.thumbnail })),
       currentWorld: () => preset.id,
       selectWorld: (id) => {
         if (id === preset.id) return;

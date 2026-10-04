@@ -78,7 +78,7 @@ All tunables live in [`src/game/config.ts`](../src/game/config.ts).
   - There are no collisions. As a last resort an overlapping NPC is recycled.
   - Parent density setting: Off, Low, Normal or Busy.
 - **World switching** saves `worldId` and reloads the page rather than hot-swapping Three.js resources.
-- **Worlds:** Construction, Nature (Sea to Sky), Farm, City. They differ only in preset data. There is no `if (world === …)` anywhere in the engine.
+- **Worlds:** Construction, Nature, Farm, City. They differ only in preset data. There is no `if (world === …)` anywhere in the engine.
 - Terrain is a single plane that follows the bus while its texture stays fixed in world space.
   The sky dome and horizon hills also follow the bus.
 - Performance: pixel ratio is capped at 1.5, there are no real-time shadows (a blob shadow sits under the bus), and props are low-poly vertex-coloured.

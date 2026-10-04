@@ -3,6 +3,7 @@ import type { WorldPreset } from './types';
 export const farm: WorldPreset = {
   id: 'farm',
   name: 'Farm',
+  thumbnail: '/worlds/farm.jpg',
   sky: {
     top: '#62b6ff',
     horizon: '#e4f4ff',
