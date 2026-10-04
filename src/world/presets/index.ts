@@ -37,7 +37,7 @@ export function validatePreset(preset: WorldPreset): string[] {
     if (b.to <= b.from) errors.push(`terrain.bands[${i}]: to must exceed from`);
     if (b.from < 6) errors.push(`terrain.bands[${i}]: must start beyond the road (>= 6 m)`);
   });
-  if (!preset.props?.items?.length) errors.push('props.items must not be empty');
+  if (!preset.props?.items?.some((i) => !i.every)) errors.push('props.items needs at least one regular (non-landmark) prop');
   const [min, max] = preset.props?.perChunk ?? [0, -1];
   if (min < 0 || max < min) errors.push('props.perChunk must be [min, max] with 0 <= min <= max');
   preset.props?.items?.forEach((p) => {
@@ -45,7 +45,15 @@ export function validatePreset(preset: WorldPreset): string[] {
     if (p.weight <= 0) errors.push(`prop ${p.kind}: weight must be positive`);
     // Nothing may stand where the bus can drive (hard limit 3.3 m + half bus width + margin).
     if (p.minDistance < -1.1) errors.push(`prop ${p.kind}: too close to the driving corridor`);
+    if (p.every && !(p.every.chunks >= 1)) errors.push(`prop ${p.kind}: every.chunks must be >= 1`);
   });
+  if (preset.guideway) {
+    const g = preset.guideway;
+    // Columns must stand outside the driving corridor and the lane-avoidance shoulder.
+    if (g.offset < 7.5) errors.push('guideway.offset must be >= 7.5 m (outside the road)');
+    if (g.height < 5) errors.push('guideway.height must be >= 5 m (clear of vehicles)');
+    if (g.train.cars < 1 || g.train.speed <= 0) errors.push('guideway.train needs cars and a positive speed');
+  }
   if (!preset.traffic) errors.push('traffic is required');
   if (preset.traffic?.enabled && !preset.traffic.vehicles.length) errors.push('traffic.vehicles must not be empty');
   if (!preset.audio?.ambience) errors.push('audio.ambience is required');

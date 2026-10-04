@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { CONFIG } from '../game/config';
 import { ChunkManager } from './ChunkManager';
-import { buildColoredGeometry, cone, makeCanvas } from './geometry';
+import { Guideway } from './Guideway';
+import { box, buildColoredGeometry, cone, makeCanvas, rbox } from './geometry';
 import { ObjectSpawner } from './ObjectSpawner';
-import type { HillsPreset, SkyPreset, TerrainPreset, WorldPreset } from './presets/types';
+import type { HillsPreset, SkylinePreset, SkyPreset, TerrainPreset, WorldPreset } from './presets/types';
 import { createRng } from './random';
 import { RoadGenerator } from './RoadGenerator';
 
@@ -20,6 +21,8 @@ export class WorldManager {
   private readonly terrainTexture: THREE.Texture;
   private readonly sky: THREE.Mesh;
   private readonly hills: THREE.Mesh;
+  private readonly skyline: THREE.Mesh | null;
+  readonly guideway: Guideway | null;
   private readonly sun: THREE.DirectionalLight;
   private readonly terrainTile = 24;
 
@@ -39,6 +42,8 @@ export class WorldManager {
 
     this.sky = createSkyDome(preset.sky);
     this.hills = createHills(preset.sky.hills);
+    this.skyline = preset.sky.skyline ? createSkyline(preset.sky.skyline) : null;
+    if (this.skyline) this.group.add(this.skyline);
     this.terrainTexture = createTerrainTexture(preset.terrain);
     const size = CONFIG.world.terrainSize;
     this.terrainTexture.repeat.set(size / this.terrainTile, size / this.terrainTile);
@@ -52,15 +57,22 @@ export class WorldManager {
     this.chunks = new ChunkManager(this.road, preset.road, preset.terrain.bands);
     this.props = new ObjectSpawner(this.road, preset.props, this.chunks.poolSize);
     this.chunks.onChunkAssigned((slot, index) => this.props.populate(slot, index));
+    this.guideway = preset.guideway ? new Guideway(this.road, preset.guideway, this.chunks.poolSize) : null;
+    if (this.guideway) {
+      const guideway = this.guideway;
+      this.chunks.onChunkAssigned((slot, index) => guideway.assign(slot, index));
+      this.group.add(guideway.group);
+    }
     this.chunks.reset(0);
     this.group.add(this.chunks.group, this.props.group);
     scene.add(this.group);
   }
 
   /** Keep the endless world centred around the vehicle and animate props. */
-  update(progress: number, focus: THREE.Vector3, timeSec: number): void {
+  update(progress: number, focus: THREE.Vector3, timeSec: number, dt = 0): void {
     this.chunks.update(progress);
     this.props.animate(timeSec);
+    this.guideway?.update(dt, progress);
 
     // Terrain follows the vehicle while its texture stays fixed in world space.
     this.terrain.position.set(focus.x, 0, focus.z);
@@ -68,6 +80,7 @@ export class WorldManager {
 
     this.sky.position.set(focus.x, 0, focus.z);
     this.hills.position.set(focus.x, 0, focus.z);
+    this.skyline?.position.set(focus.x, 0, focus.z);
     this.sun.position.set(focus.x - 40, 80, focus.z + 30);
     this.sun.target.position.set(focus.x, 0, focus.z);
   }
@@ -95,6 +108,39 @@ function createSkyDome(sky: SkyPreset): THREE.Mesh {
   });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.renderOrder = -1;
+  mesh.frustumCulled = false;
+  return mesh;
+}
+
+/**
+ * Distant tower silhouettes in hazy colours (no fog, like the hills). Leaves a gap straight
+ * ahead and behind, where the road runs, so no tower stands on the road.
+ */
+function createSkyline(skyline: SkylinePreset): THREE.Mesh {
+  const rng = createRng(17);
+  const parts: Parameters<typeof buildColoredGeometry>[0] = [];
+  const radius = CONFIG.camera.far * 0.64;
+  for (let i = 0; i < skyline.count; i++) {
+    const angle = (i / skyline.count) * Math.PI * 2 + rng() * 0.05;
+    // Angle 0 / π = along X; the road runs along Z, i.e. at ±π/2.
+    const fromRoad = Math.abs(Math.abs(Math.sin(angle)) - 1);
+    if (fromRoad < 0.12) continue;
+    // The road heads along -Z, so its right-hand side is +X.
+    const x0 = Math.cos(angle);
+    if ((skyline.side === 'right' && x0 < 0) || (skyline.side === 'left' && x0 > 0)) continue;
+    const r = radius + rng() * 18;
+    const h = skyline.height[0] + rng() * (skyline.height[1] - skyline.height[0]);
+    const w = skyline.width[0] + rng() * (skyline.width[1] - skyline.width[0]);
+    const color = skyline.colors[i % skyline.colors.length];
+    const x = Math.cos(angle) * r;
+    const z = Math.sin(angle) * r;
+    parts.push({ geometry: rbox(w, h, w * 0.8, 0.6), color, position: [x, h / 2 - 1, z], rotation: [0, -angle, 0] });
+    if (rng() < 0.35) {
+      parts.push({ geometry: box(w * 0.5, 3, w * 0.4), color, position: [x, h + 0.5, z], rotation: [0, -angle, 0] });
+    }
+  }
+  const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, fog: false });
+  const mesh = new THREE.Mesh(buildColoredGeometry(parts), material);
   mesh.frustumCulled = false;
   return mesh;
 }

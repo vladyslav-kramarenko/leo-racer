@@ -142,10 +142,17 @@ export function camperParts(): ColoredPart[] {
   ];
 }
 
+/** City trolley bus: white with a blue skirt, trolley poles on the roof. */
 export function cityBusParts(): ColoredPart[] {
   const parts: ColoredPart[] = [
-    { geometry: rbox(2.5, 2.6, 10, 0.3, 2), color: '#d8433b', position: [0, 1.75, 0] },
-    { geometry: rbox(2.4, 0.22, 9.6, 0.1), color: TOY.WHITE, position: [0, 3.1, 0] },
+    { geometry: rbox(2.5, 2.6, 10, 0.3, 2), color: '#f2f4f6', position: [0, 1.75, 0] },
+    { geometry: rbox(2.54, 0.7, 10.04, 0.2), color: '#1f6fd0', position: [0, 0.95, 0] },
+    { geometry: rbox(2.54, 0.12, 10.04, 0.05), color: '#ffd23f', position: [0, 1.36, 0] },
+    { geometry: rbox(2.4, 0.22, 9.6, 0.1), color: '#d9dde2', position: [0, 3.1, 0] },
+    // Trolley poles reaching back and up.
+    { geometry: rbox(0.08, 0.08, 6, 0.03), color: TOY.DARK, position: [-0.35, 3.75, 2.2], rotation: [-0.22, 0, 0] },
+    { geometry: rbox(0.08, 0.08, 6, 0.03), color: TOY.DARK, position: [0.35, 3.75, 2.2], rotation: [-0.22, 0, 0] },
+    { geometry: rbox(1.2, 0.25, 1.2, 0.08), color: '#9aa3ab', position: [0, 3.3, 1.5] },
     { geometry: rbox(2.52, 0.95, 8.2, 0.06), color: TOY.BLACK, position: [0, 2.3, 0.6] },
     { geometry: rbox(2.2, 1.25, 0.06, 0.05), color: TOY.GLASS, position: [0, 2.15, -5.0] },
     { geometry: rbox(1.6, 0.26, 0.05, 0.03), color: TOY.BLACK, position: [0, 2.95, -5.01] },

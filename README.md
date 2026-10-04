@@ -28,6 +28,7 @@ Leo Racer is a browser driving toy for children aged 2–4.
 ## Features
 
 - **Four worlds:** Construction, Nature, Farm and City. All are endless and pure data presets on one engine. Props are animated: cranes turn, windmills spin, traffic lights cycle.
+  City is Vancouver-inspired: glass towers, the seawall, SkyTrain overhead, cherry blossoms and simplified landmarks.
 - **Many inputs:**
   - Keyboard steering, brake and horn.
   - Any gamepad or steering wheel via the Gamepad API, with a calibration wizard.

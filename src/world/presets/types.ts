@@ -38,7 +38,14 @@ export type PropKind =
   | 'shop'
   | 'trafficLight'
   | 'streetLamp'
-  | 'parkedCar';
+  | 'parkedCar'
+  | 'glassTower'
+  | 'blossomTree'
+  // Landmarks (Vancouver-inspired, simplified)
+  | 'scienceWorld'
+  | 'canadaPlace'
+  | 'harbourCentre'
+  | 'steamClock';
 
 export type Side = 'left' | 'right' | 'both';
 
@@ -55,6 +62,11 @@ export interface PropSpec {
   facing?: 'road' | 'traffic' | 'away' | 'random';
   /** Which side of the road the prop may appear on (default both). */
   side?: Side;
+  /**
+   * Landmarks: instead of a random pick, place exactly one in every `chunks`-th road chunk
+   * (chunk index ≡ offset mod chunks), so a big landmark shows up now and then, not everywhere.
+   */
+  every?: { chunks: number; offset?: number };
 }
 
 export interface HillsPreset {
@@ -63,6 +75,16 @@ export interface HillsPreset {
   width: [number, number];
   /** Optional snow cap colour for mountains. */
   snowCap?: string;
+}
+
+/** A distant ring of tower silhouettes (city skyline); follows the vehicle like the hills. */
+export interface SkylinePreset {
+  colors: string[];
+  height: [number, number];
+  width: [number, number];
+  count: number;
+  /** Which side of the road the skyline sits on (default both). */
+  side?: Side;
 }
 
 export interface SkyPreset {
@@ -77,6 +99,7 @@ export interface SkyPreset {
   hemiGround: string;
   hemiIntensity: number;
   hills: HillsPreset;
+  skyline?: SkylinePreset;
 }
 
 /** A coloured strip that follows the road (water, fields, sidewalk…). Offsets from the road centre. */
@@ -131,7 +154,7 @@ export interface TrafficPreset {
   vehicles: TrafficKind[];
 }
 
-export type AmbientEvent = 'clink' | 'chirp' | 'moo' | 'wave' | 'honk' | 'bell';
+export type AmbientEvent = 'clink' | 'chirp' | 'moo' | 'wave' | 'honk' | 'bell' | 'gull';
 
 export interface AudioPreset {
   engineBaseHz: number;
@@ -146,6 +169,27 @@ export interface AudioPreset {
   };
 }
 
+/** Elevated rail alongside the road (SkyTrain-style) with an occasional train. */
+export interface GuidewayPreset {
+  side: 'left' | 'right';
+  /** Lateral offset from the road centre (must clear the sidewalk props). */
+  offset: number;
+  /** Height of the beam's underside, metres. */
+  height: number;
+  width: number;
+  thickness: number;
+  color: string;
+  columnSpacing: number;
+  train: {
+    cars: number;
+    carLength: number;
+    /** m/s; trains overtake the bus or come the other way. */
+    speed: number;
+    intervalSec: [number, number];
+    colors: { body: string; stripe: string; window: string };
+  };
+}
+
 export interface WorldPreset {
   id: string;
   name: string;
@@ -156,5 +200,6 @@ export interface WorldPreset {
   road: RoadPreset;
   props: PropsPreset;
   traffic: TrafficPreset;
+  guideway?: GuidewayPreset;
   audio: AudioPreset;
 }

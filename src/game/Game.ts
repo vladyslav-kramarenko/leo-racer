@@ -224,7 +224,7 @@ export class Game {
     this.bus.object.rotation.y = -(frame.heading + state.yaw);
     this.bus.animate(dt, state, this.timeSec);
 
-    this.world.update(state.progress, this.busPosition, this.timeSec);
+    this.world.update(state.progress, this.busPosition, this.timeSec, dt);
     this.traffic.update(dt, this.timeSec, { s: state.progress, d: state.lateralOffset });
     this.sprites.update(dt, state.progress, state.lateralOffset);
     this.cameraRig.update(dt, state.progress, state.lateralOffset, this.mixedSteer);

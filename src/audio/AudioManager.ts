@@ -4,7 +4,7 @@ import type { AmbientEvent, AudioPreset } from '../world/presets/types';
  * All sounds are synthesised with Web Audio — no audio files, no licensing questions.
  * Engine: two detuned oscillators through a low-pass filter.
  * Ambience: a filtered noise bed plus occasional events chosen by the world preset
- * (construction clinks, birds, cows, waves, distant honks, bicycle bells).
+ * (construction clinks, birds, cows, waves, distant honks, bicycle bells, seagulls).
  * Horn: a friendly two-tone beep.
  * Air brake: a short hiss of filtered white noise.
  */
@@ -257,6 +257,19 @@ export class AudioManager {
         // Distant, soft car horn.
         tone(ctx, out, now, 'square', [330, 415], 0.03, 0.02, 0.3, 900);
         break;
+      case 'gull': {
+        // Seagull: two quick rising-then-falling "kee-ow" calls.
+        for (let i = 0; i < 2; i++) {
+          const t = now + i * 0.32;
+          const osc = ctx.createOscillator();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(1500, t);
+          osc.frequency.linearRampToValueAtTime(2300, t + 0.07);
+          osc.frequency.exponentialRampToValueAtTime(1100, t + 0.26);
+          envelope(ctx, osc, out, t, 0.05, 0.02, 0.26);
+        }
+        break;
+      }
       case 'bell':
         tone(ctx, out, now, 'sine', [2100, 2650], 0.06, 0.003, 0.7);
         tone(ctx, out, now + 0.18, 'sine', [2100, 2650], 0.05, 0.003, 0.6);

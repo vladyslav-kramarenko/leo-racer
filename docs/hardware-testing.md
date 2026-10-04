@@ -49,7 +49,7 @@ Open the Parent Menu (hold `Esc` for 2 s) → Diagnostics → Overlay: **Shown**
 |-------|--------|--------|
 | FPS on Surface Book 3 (diagnostics) | ≥ 60 preferred, ≥ 30 minimum | |
 | FPS on an older laptop (5–7 years) | ≥ 30 | |
-| Draw calls (diagnostics) | ≤ 45 (measured 36–45 with busy traffic) | |
+| Draw calls / triangles (diagnostics) | ≤ 60 / ≤ 150k (measured 40–56 / 70k–145k, busy traffic) | |
 | FPS on a tablet with busy traffic | ≥ 30 | |
 
 ## Known browser caveats

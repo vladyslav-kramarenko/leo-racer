@@ -78,11 +78,19 @@ All tunables live in [`src/game/config.ts`](../src/game/config.ts).
   - There are no collisions. As a last resort an overlapping NPC is recycled.
   - Parent density setting: Off, Low, Normal or Busy.
 - **World switching** saves `worldId` and reloads the page rather than hot-swapping Three.js resources.
-- **Worlds:** Construction, Nature, Farm, City. They differ only in preset data. There is no `if (world === …)` anywhere in the engine.
+- **Toy style:** all models share rounded or chamfered shapes and common parts from [`toyParts.ts`](../src/world/toyParts.ts) (wheels with rims, lights, framed glass).
+  Instanced props use a 44-triangle chamfer box; only hero silhouettes (bus, car bodies) use smooth rounding.
+- **Landmarks** (`every: { chunks, offset }` on a prop spec) are placed exactly once in every N-th chunk instead of being picked at random, so a big building shows up now and then.
+- **Skyline:** an optional ring of distant tower silhouettes that follows the bus like the hills, on one or both sides.
+- **Guideway** ([`Guideway.ts`](../src/world/Guideway.ts)): an optional elevated rail along the road, with a train that overtakes the bus or comes the other way.
+  The beam is one mesh rewritten per chunk slot; columns and train cars are instanced.
+- **Worlds:** Construction, Nature, Farm, City.
+  - City is Vancouver-inspired and simplified: glass towers, a seawall along False Creek, a SkyTrain line, cherry blossoms, and landmarks (a geodesic science dome, a sail-roofed pier, a lookout tower, the steam clock).
+  - Worlds differ only in preset data. There is no `if (world === …)` anywhere in the engine.
 - Terrain is a single plane that follows the bus while its texture stays fixed in world space.
   The sky dome and horizon hills also follow the bus.
 - Performance: pixel ratio is capped at 1.5, there are no real-time shadows (a blob shadow sits under the bus), and props are low-poly vertex-coloured.
-  Measured with busy traffic: 36 draw calls (Construction) to 45 (Farm).
+  Measured with busy traffic: about 40–56 draw calls and 70k–145k triangles per frame, depending on the world. Diagnostics shows both.
 
 ## CREATE
 

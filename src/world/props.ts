@@ -653,6 +653,126 @@ function streetLamp(): PropModel {
   ]);
 }
 
+/** Slim glass condo tower on a stone podium, with white balcony lines ("Vancouverism"). */
+function glassTower(): PropModel {
+  const parts: ColoredPart[] = [
+    { geometry: rbox(10, 6, 9, 0.2), color: '#d9d4c7', position: [0, 3, 0] },
+    { geometry: box(9.4, 3.2, 0.1), color: GLASS, position: [0, 1.8, -4.52] },
+    { geometry: rbox(9.6, 0.3, 0.9, 0.08), color: '#9a9ca0', position: [0, 3.6, -4.8] },
+    { geometry: rbox(6, 30, 6, 0.3), color: '#6fb7c9', position: [0.8, 21, 0.5] },
+    { geometry: rbox(2.4, 1.8, 2.4, 0.15), color: '#c9cdd2', position: [0.8, 36.9, 0.5] },
+    { geometry: box(0.15, 1.2, 0.15), color: '#c9cdd2', position: [0.8, 38.4, 0.5] },
+  ];
+  // Balcony slabs every three metres.
+  for (let y = 8.5; y < 36; y += 3) parts.push({ geometry: box(6.3, 0.16, 6.3), color: '#f2f2f2', position: [0.8, y, 0.5] });
+  // A vertical frame stripe on the front.
+  parts.push({ geometry: box(0.3, 30, 0.1), color: '#f2f2f2', position: [0.8, 21, -2.53] });
+  return model(parts, { tints: ['#ffffff', '#e0f0ff', '#e6fff0', '#efeaff'] });
+}
+
+function blossomTree(): PropModel {
+  return model([{ geometry: cyl(0.16, 0.26, 2.1, 8), color: '#5a3a2a', position: [0, 1.05, 0] }], {
+    parts: [
+      part(
+        [
+          { geometry: ico(1.6, 1), color: '#f7b6cf', position: [0, 3.1, 0] },
+          { geometry: ico(1.05, 1), color: '#f29cbf', position: [0.9, 3.6, 0.3] },
+          { geometry: ico(1.0, 1), color: '#fbd0e0', position: [-0.8, 3.5, -0.4] },
+          { geometry: ico(0.8, 1), color: '#ffe0ec', position: [0.1, 4.2, -0.2] },
+        ],
+        [0, 1.9, 0],
+        { type: 'swing', axis: 'z', amplitude: 0.025, speed: 1.3 },
+      ),
+    ],
+  });
+}
+
+/** Geodesic dome on columns by the water (Science World, simplified). */
+function scienceWorld(): PropModel {
+  const parts: ColoredPart[] = [
+    { geometry: cyl(10, 10.5, 0.4, 24), color: '#cfccc5', position: [0, 0.2, 0] },
+    { geometry: cyl(3.2, 3.6, 6.2, 12), color: '#5e8fae', position: [0, 3.3, 0] },
+    // Faceted silver sphere — flat shading makes the icosphere read as a geodesic dome.
+    { geometry: ico(8, 2), color: '#d5dce2', position: [0, 13.6, 0] },
+    { geometry: cyl(5.6, 5.6, 0.6, 20), color: '#9aa3ab', position: [0, 6.1, 0] },
+  ];
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    parts.push({ geometry: cyl(0.35, 0.45, 6.2, 8), color: '#e8e6e1', position: [Math.cos(a) * 4.6, 3.3, Math.sin(a) * 4.6] });
+  }
+  return model(parts);
+}
+
+/** Pier building with white tent "sails" on the roof (Canada Place, simplified). Long side along X. */
+function canadaPlace(): PropModel {
+  const parts: ColoredPart[] = [
+    { geometry: rbox(24, 3.4, 10, 0.25), color: '#e7e5e0', position: [0, 1.7, 0] },
+    { geometry: box(23.4, 1.2, 0.1), color: GLASS, position: [0, 2.0, -5.02] },
+    { geometry: rbox(26, 0.5, 12, 0.15), color: '#9a9ca0', position: [0, 0.25, 0] },
+  ];
+  // Five sails, alternating heights, slightly overlapping.
+  for (let i = 0; i < 5; i++) {
+    const x = -9 + i * 4.5;
+    const h = i % 2 ? 6.2 : 7.4;
+    parts.push({ geometry: cone(3.1, h, 4), color: '#fbfbf8', position: [x, 3.4 + h / 2, 0.4], rotation: [0, Math.PI / 4, 0], scale: [1, 1, 1.25] });
+  }
+  for (const x of [-11, 11]) parts.push({ geometry: cyl(0.08, 0.08, 6, 5), color: GREY, position: [x, 6.4, -4] });
+  return model(parts);
+}
+
+/** Concrete tower with an outside yellow elevator and a lookout "saucer" (Harbour Centre, simplified). */
+function harbourCentre(): PropModel {
+  const parts: ColoredPart[] = [
+    { geometry: rbox(9, 4, 9, 0.2), color: '#cfcac0', position: [0, 2, 0] },
+    { geometry: rbox(6, 38, 6, 0.2), color: '#d8d4cc', position: [0, 23, 0] },
+    { geometry: box(1.0, 38, 0.35), color: '#f2c230', position: [0, 23, -3.12] },
+    { geometry: cyl(2, 2.4, 3, 12), color: '#b9b4aa', position: [0, 43.5, 0] },
+    { geometry: cyl(6.5, 5.2, 2.6, 20), color: '#b9b4aa', position: [0, 46.3, 0] },
+    { geometry: cyl(6.6, 6.6, 1.1, 20), color: '#7fb3d2', position: [0, 46.6, 0] },
+    { geometry: cyl(4.4, 6.5, 1.0, 20), color: '#cfcac0', position: [0, 48.1, 0] },
+    { geometry: cyl(0.12, 0.2, 5, 6), color: '#8a8f96', position: [0, 51.1, 0] },
+  ];
+  // Dark vertical window strips on the front and back.
+  for (const x of [-2, -0.9, 0.9, 2]) {
+    for (const z of [-3.04, 3.04]) parts.push({ geometry: box(0.45, 36, 0.1), color: '#6a7480', position: [x, 23, z] });
+  }
+  return model(parts);
+}
+
+/** Little steam clock on the sidewalk (Gastown, simplified) — it puffs steam now and then. */
+function steamClock(): PropModel {
+  const BRONZE = '#6b4a2e';
+  const parts: ColoredPart[] = [
+    { geometry: rbox(1.3, 0.6, 1.3, 0.08), color: BRONZE, position: [0, 0.3, 0] },
+    { geometry: rbox(0.85, 2.4, 0.85, 0.06), color: '#7a5636', position: [0, 1.8, 0] },
+    { geometry: rbox(1.15, 1.1, 1.15, 0.08), color: BRONZE, position: [0, 3.55, 0] },
+    { geometry: cone(0.75, 1.0, 4), color: '#4f6a4a', position: [0, 4.6, 0], rotation: [0, Math.PI / 4, 0] },
+    { geometry: cyl(0.06, 0.06, 0.6, 5), color: '#c9a24a', position: [0, 5.3, 0] },
+  ];
+  // Clock faces on all four sides.
+  for (const [x, z, rot] of [
+    [0, -0.6, FACING_Z],
+    [0, 0.6, FACING_Z],
+    [-0.6, 0, SIDEWAYS],
+    [0.6, 0, SIDEWAYS],
+  ] as const) {
+    parts.push(
+      { geometry: cyl(0.4, 0.4, 0.04, 14), color: '#f2ecd9', position: [x, 3.55, z], rotation: rot },
+      { geometry: box(0.04, 0.3, 0.04), color: DARK, position: [x * 1.06, 3.65, z * 1.06] },
+    );
+  }
+  const steam = part(
+    [
+      { geometry: ico(0.3, 1), color: WHITE, position: [0.15, 5.9, 0] },
+      { geometry: ico(0.4, 1), color: WHITE, position: [-0.1, 6.4, 0.1] },
+      { geometry: ico(0.5, 1), color: '#f2f4f6', position: [0.2, 7.0, -0.1] },
+    ],
+    [0, 5.9, 0],
+    { type: 'blink', hz: 0.25, duty: 0.4 },
+  );
+  return model(parts, { parts: [steam] });
+}
+
 const CAR_TINTS = ['#e8453c', '#3d7be0', '#f2c230', '#46b05a', '#f2f2f2', '#9b59d0', '#ff8a3d'];
 
 const BUILDERS: Record<PropKind, () => PropModel> = {
@@ -687,6 +807,12 @@ const BUILDERS: Record<PropKind, () => PropModel> = {
   trafficLight,
   streetLamp,
   parkedCar: () => model(carParts(), { tints: CAR_TINTS }),
+  glassTower,
+  blossomTree,
+  scienceWorld,
+  canadaPlace,
+  harbourCentre,
+  steamClock,
 };
 
 export function buildPropModel(kind: PropKind): PropModel {

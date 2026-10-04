@@ -36,6 +36,9 @@ export class ObjectSpawner {
   private readonly lit = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   private readonly unlit = new THREE.MeshBasicMaterial({ vertexColors: true });
   private readonly totalWeight: number;
+  /** Randomly picked roadside items vs. landmarks placed every N chunks. */
+  private readonly randomItems: PropSpec[];
+  private readonly landmarks: PropSpec[];
   private readonly shoulderProp: PropKind;
   private readonly m = new THREE.Matrix4();
   private readonly m2 = new THREE.Matrix4();
@@ -77,7 +80,9 @@ export class ObjectSpawner {
         active: new Array(capacity).fill(false),
       });
     }
-    this.totalWeight = preset.items.reduce((sum, p) => sum + p.weight, 0);
+    this.randomItems = preset.items.filter((i) => !i.every);
+    this.landmarks = preset.items.filter((i) => i.every);
+    this.totalWeight = this.randomItems.reduce((sum, p) => sum + p.weight, 0);
   }
 
   get drawCalls(): number {
@@ -111,7 +116,17 @@ export class ObjectSpawner {
       this.place(slot, used, this.shoulderProp, s, rowSide * (EDGE + rowDistance), 1, yaw, rng);
     }
 
-    const count = Math.floor(randRange(rng, this.preset.perChunk[0], this.preset.perChunk[1] + 1));
+    // Landmarks: exactly one in every N-th chunk, in the middle of it.
+    for (const spec of this.landmarks) {
+      const { chunks, offset = 0 } = spec.every!;
+      if ((((chunkIndex - offset) % chunks) + chunks) % chunks !== 0) continue;
+      const side = pickSide(spec, rng);
+      const s = s0 + L * (0.4 + rng() * 0.2);
+      const d = side * (EDGE + randRange(rng, spec.minDistance, spec.maxDistance));
+      this.place(slot, used, spec.kind, s, d, randRange(rng, spec.scale[0], spec.scale[1]), this.yawFor(spec.facing, s, side, rng), rng);
+    }
+
+    const count = this.randomItems.length ? Math.floor(randRange(rng, this.preset.perChunk[0], this.preset.perChunk[1] + 1)) : 0;
     for (let n = 0; n < count; n++) {
       const spec = this.pick(rng);
       const side = pickSide(spec, rng);
@@ -191,11 +206,11 @@ export class ObjectSpawner {
 
   private pick(rng: () => number): PropSpec {
     let r = rng() * this.totalWeight;
-    for (const item of this.preset.items) {
+    for (const item of this.randomItems) {
       r -= item.weight;
       if (r <= 0) return item;
     }
-    return this.preset.items[this.preset.items.length - 1];
+    return this.randomItems[this.randomItems.length - 1];
   }
 
   private yawFor(facing: PropSpec['facing'], s: number, side: number, rng: () => number): number {
