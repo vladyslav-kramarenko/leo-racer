@@ -61,6 +61,6 @@ export const farm: WorldPreset = {
   traffic: { enabled: true, vehicles: ['tractor', 'pickup', 'car', 'van'] },
   audio: {
     engineBaseHz: 50,
-    ambience: { noiseLevel: 0.035, noiseCutoff: 600, events: ['chirp', 'chirp', 'moo'], eventInterval: [2.5, 7] },
+    ambience: { noiseLevel: 0.035, noiseCutoff: 600, events: ['moo'], eventInterval: [9, 16] },
   },
 };

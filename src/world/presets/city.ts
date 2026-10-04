@@ -104,6 +104,6 @@ export const city: WorldPreset = {
   },
   audio: {
     engineBaseHz: 54,
-    ambience: { noiseLevel: 0.06, noiseCutoff: 450, events: ['gull', 'honk', 'bell', 'gull'], eventInterval: [3.5, 9] },
+    ambience: { noiseLevel: 0.06, noiseCutoff: 450, events: ['gull', 'honk', 'bell'], eventInterval: [6, 13] },
   },
 };

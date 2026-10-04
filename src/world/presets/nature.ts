@@ -68,6 +68,6 @@ export const nature: WorldPreset = {
   },
   audio: {
     engineBaseHz: 50,
-    ambience: { noiseLevel: 0.06, noiseCutoff: 520, noiseSwellHz: 0.12, events: ['chirp', 'chirp', 'wave'], eventInterval: [2, 6] },
+    ambience: { noiseLevel: 0.06, noiseCutoff: 520, noiseSwellHz: 0.12, events: ['wave'], eventInterval: [5, 10] },
   },
 };

@@ -1,5 +1,8 @@
 import type { AmbientEvent, AudioPreset } from '../world/presets/types';
 
+/** Engine loudness at cruise. Kept low so the bus hums gently instead of droning. */
+const ENGINE_GAIN = 0.055;
+
 /**
  * All sounds are synthesised with Web Audio — no audio files, no licensing questions.
  * Engine: two detuned oscillators through a low-pass filter.
@@ -20,6 +23,7 @@ export class AudioManager {
   private events: AmbientEvent[] = [];
   private eventInterval: [number, number] = [3, 8];
   private hornUntil = 0;
+  private zoomUntil = 0;
   private baseHz = 52;
   private whiteNoise: AudioBuffer | null = null;
   private waveNoise: AudioBuffer | null = null;
@@ -44,16 +48,19 @@ export class AudioManager {
     this.master.gain.value = 0;
     this.master.connect(ctx.destination);
 
-    // Engine
+    // Engine: soft and low — present, but not a drone. Oscillators → low-pass → gentle
+    // "chug" (pulse, multiplied) → level (so a parked bus is truly silent).
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = 420;
+    filter.frequency.value = 300;
+    const pulse = ctx.createGain();
+    pulse.gain.value = 1;
     this.engineGain = ctx.createGain();
-    this.engineGain.gain.value = 0.11;
-    filter.connect(this.engineGain).connect(this.master);
+    this.engineGain.gain.value = ENGINE_GAIN;
+    filter.connect(pulse).connect(this.engineGain).connect(this.master);
     for (const [type, mult, gain] of [
       ['sawtooth', 1, 0.5],
-      ['square', 2.01, 0.18],
+      ['square', 2.01, 0.07],
     ] as const) {
       const osc = ctx.createOscillator();
       osc.type = type;
@@ -64,12 +71,11 @@ export class AudioManager {
       osc.start();
       this.engineOsc.push(osc);
     }
-    // Slow wobble for a chugging feel.
     const lfo = ctx.createOscillator();
-    lfo.frequency.value = 7;
+    lfo.frequency.value = 6;
     const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 0.03;
-    lfo.connect(lfoGain).connect(this.engineGain.gain);
+    lfoGain.gain.value = 0.12;
+    lfo.connect(lfoGain).connect(pulse.gain);
     lfo.start();
 
     // Ambience: noise bed (optionally swelling like waves) + preset events.
@@ -140,7 +146,7 @@ export class AudioManager {
   /** 0 = engine silent (bus parked at the end of a session), 1 = normal. */
   setEngineLevel(level: number): void {
     if (!this.ctx || !this.engineGain) return;
-    this.engineGain.gain.setTargetAtTime(0.11 * Math.max(0, Math.min(1, level)), this.ctx.currentTime, 0.6);
+    this.engineGain.gain.setTargetAtTime(ENGINE_GAIN * Math.max(0, Math.min(1, level)), this.ctx.currentTime, 0.6);
   }
 
   horn(): void {
@@ -172,40 +178,49 @@ export class AudioManager {
     }
   }
 
-  /** A fast car zooming past: a falling engine note plus a soft whoosh. */
+  /**
+   * A fast car going past: a soft, low "vrooom" that swells in and fades out.
+   * Deliberately gentle — no buzzy waveform, no sharp attack, quieter than the horn.
+   */
   zoom(): void {
     const ctx = this.ctx;
     if (!ctx || !this.master || !this.enabled) return;
     const now = ctx.currentTime;
+    if (now < this.zoomUntil) return;
+    this.zoomUntil = now + 3;
+
+    // Low engine hum sliding down (a hint of Doppler), heavily filtered.
     const osc = ctx.createOscillator();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(240, now);
-    osc.frequency.exponentialRampToValueAtTime(95, now + 0.9);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(92, now + 1.4);
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
-    lp.frequency.value = 900;
+    lp.frequency.value = 420;
+    lp.Q.value = 0.5;
     const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, now);
-    g.gain.exponentialRampToValueAtTime(0.07, now + 0.12);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 1.0);
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.035, now + 0.45);
+    g.gain.linearRampToValueAtTime(0, now + 1.5);
     osc.connect(lp).connect(g).connect(this.master);
     osc.start(now);
-    osc.stop(now + 1.05);
+    osc.stop(now + 1.55);
 
-    this.whiteNoise ??= createWhiteNoise(ctx, 1);
+    // Soft rumble of air (brown noise is much gentler than white noise).
+    this.waveNoise ??= createBrownNoise(ctx, 2.5);
     const noise = ctx.createBufferSource();
-    noise.buffer = this.whiteNoise;
-    const band = ctx.createBiquadFilter();
-    band.type = 'bandpass';
-    band.frequency.setValueAtTime(2200, now);
-    band.frequency.exponentialRampToValueAtTime(700, now + 0.8);
+    noise.buffer = this.waveNoise;
+    const nf = ctx.createBiquadFilter();
+    nf.type = 'lowpass';
+    nf.frequency.setValueAtTime(900, now);
+    nf.frequency.linearRampToValueAtTime(380, now + 1.4);
     const ng = ctx.createGain();
-    ng.gain.setValueAtTime(0.0001, now);
-    ng.gain.exponentialRampToValueAtTime(0.05, now + 0.15);
-    ng.gain.exponentialRampToValueAtTime(0.0001, now + 0.85);
-    noise.connect(band).connect(ng).connect(this.master);
+    ng.gain.setValueAtTime(0, now);
+    ng.gain.linearRampToValueAtTime(0.06, now + 0.5);
+    ng.gain.linearRampToValueAtTime(0, now + 1.45);
+    noise.connect(nf).connect(ng).connect(this.master);
     noise.start(now);
-    noise.stop(now + 0.9);
+    noise.stop(now + 1.5);
   }
 
   /** "Pssht!" — school-bus air brake. */
@@ -240,16 +255,29 @@ export class AudioManager {
         tone(ctx, out, now, 'triangle', [900 + Math.random() * 900], 0.25, 0.005, 0.35);
         break;
       case 'chirp': {
-        // Two or three quick upward sweeps — a small bird.
+        // A small bird far away: two or three short trills (fast vibrato), soft and not too high.
         const notes = 2 + Math.floor(Math.random() * 2);
-        const base = 2600 + Math.random() * 900;
+        const base = 1700 + Math.random() * 500;
         for (let i = 0; i < notes; i++) {
-          const t = now + i * 0.13;
+          const t = now + i * 0.16;
           const osc = ctx.createOscillator();
           osc.type = 'sine';
           osc.frequency.setValueAtTime(base, t);
-          osc.frequency.exponentialRampToValueAtTime(base * 1.45, t + 0.08);
-          envelope(ctx, osc, out, t, 0.07, 0.01, 0.09);
+          osc.frequency.linearRampToValueAtTime(base * 1.18, t + 0.1);
+          const trill = ctx.createOscillator();
+          trill.frequency.value = 28 + Math.random() * 10;
+          const depth = ctx.createGain();
+          depth.gain.value = base * 0.06;
+          trill.connect(depth).connect(osc.frequency);
+          trill.start(t);
+          trill.stop(t + 0.16);
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(0.03, t + 0.03);
+          g.gain.linearRampToValueAtTime(0, t + 0.13);
+          osc.connect(g).connect(out);
+          osc.start(t);
+          osc.stop(t + 0.15);
         }
         break;
       }
@@ -294,21 +322,27 @@ export class AudioManager {
         tone(ctx, out, now, 'square', [330, 415], 0.03, 0.02, 0.3, 900);
         break;
       case 'gull': {
-        // Seagull: two quick rising-then-falling "kee-ow" calls.
+        // Distant seagull: two soft "kee-ow" calls, lower and gentler than before.
         for (let i = 0; i < 2; i++) {
-          const t = now + i * 0.32;
+          const t = now + i * 0.36;
           const osc = ctx.createOscillator();
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(1500, t);
-          osc.frequency.linearRampToValueAtTime(2300, t + 0.07);
-          osc.frequency.exponentialRampToValueAtTime(1100, t + 0.26);
-          envelope(ctx, osc, out, t, 0.05, 0.02, 0.26);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1050, t);
+          osc.frequency.linearRampToValueAtTime(1500, t + 0.08);
+          osc.frequency.exponentialRampToValueAtTime(800, t + 0.3);
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(0.028, t + 0.05);
+          g.gain.linearRampToValueAtTime(0, t + 0.3);
+          osc.connect(g).connect(out);
+          osc.start(t);
+          osc.stop(t + 0.32);
         }
         break;
       }
       case 'bell':
-        tone(ctx, out, now, 'sine', [2100, 2650], 0.06, 0.003, 0.7);
-        tone(ctx, out, now + 0.18, 'sine', [2100, 2650], 0.05, 0.003, 0.6);
+        tone(ctx, out, now, 'sine', [1500, 1890], 0.035, 0.005, 0.6);
+        tone(ctx, out, now + 0.2, 'sine', [1500, 1890], 0.03, 0.005, 0.5);
         break;
     }
   }
