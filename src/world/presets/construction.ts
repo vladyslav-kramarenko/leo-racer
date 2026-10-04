@@ -45,6 +45,7 @@ export const construction: WorldPreset = {
       { kind: 'excavator', weight: 1.5, minDistance: 7, maxDistance: 18, scale: [1, 1.1], maxPerChunk: 1 },
       { kind: 'dumpTruck', weight: 1.5, minDistance: 7, maxDistance: 18, scale: [1, 1.1], maxPerChunk: 1 },
       { kind: 'crane', weight: 0.8, minDistance: 16, maxDistance: 30, scale: [1, 1.2], maxPerChunk: 1 },
+      { kind: 'unfinishedBuilding', weight: 0.75, minDistance: 13, maxDistance: 22, scale: [0.95, 1.1], maxPerChunk: 1, facing: 'road' },
     ],
   },
   traffic: { enabled: true, vehicles: ['car', 'pickup', 'dumpTruck', 'mixer', 'van'] },

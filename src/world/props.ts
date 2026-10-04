@@ -25,7 +25,9 @@ export type PartAnim =
    * Conveyor: moves by `vector` over `period` seconds, then jumps back. Spacing N copies
    * exactly `vector` apart (and hiding the ends) makes a seamless endless line — gondola cabins.
    */
-  | { type: 'slide'; vector: [number, number, number]; period: number };
+  | { type: 'slide'; vector: [number, number, number]; period: number }
+  /** Glides smoothly from the pivot to pivot + `vector` and back over `period` seconds (lifts, hoists). */
+  | { type: 'shuttle'; vector: [number, number, number]; period: number };
 
 export interface PartModel {
   /** Geometry in part-local space (pivot at the origin). */
@@ -218,6 +220,95 @@ function dumpTruck(): PropModel {
   const { body, bed, pivot } = dumpTruckParts();
   // Parked on site, slowly tipping its bed.
   return model(body, { parts: [part(bed, pivot, { type: 'swing', axis: 'x', amplitude: 0.2, speed: 0.35, bias: 0.2 })] });
+}
+
+/**
+ * Unfinished building: concrete frame with slabs on columns, brick infill on the lower floors,
+ * a bare top floor with rebar sticking up, scaffolding with a green safety net on the front,
+ * and a yellow construction hoist gliding up and down its mast. Faces the road (-Z).
+ */
+function unfinishedBuilding(): PropModel {
+  const CONCRETE = '#c9c6bf';
+  const SLAB = '#b8b4ab';
+  const BRICK = '#b5654a';
+  const REBAR = '#8a4f35';
+  const SCAFFOLD = '#7d8288';
+  const FLOOR = 3;
+  const xs = [-4.6, 0, 4.6];
+  const zs = [-3.6, 0, 3.6];
+  const parts: ColoredPart[] = [{ geometry: rbox(10.6, 0.35, 8.6, 0.08), color: SLAB, position: [0, 0.18, 0] }];
+
+  // Three finished floors: columns + slab.
+  for (let f = 0; f < 3; f++) {
+    const y0 = 0.35 + f * FLOOR;
+    for (const x of xs) for (const z of zs) parts.push({ geometry: box(0.4, FLOOR, 0.4), color: CONCRETE, position: [x, y0 + FLOOR / 2, z] });
+    parts.push({ geometry: rbox(10.4, 0.28, 8.4, 0.06), color: SLAB, position: [0, y0 + FLOOR, 0] });
+  }
+  // Top floor: only some columns so far, with rebar sticking out of them and the slab edge.
+  const topY = 0.35 + 3 * FLOOR;
+  for (const [x, z, h] of [
+    [-4.6, -3.6, 2.6],
+    [0, -3.6, 1.6],
+    [-4.6, 0, 2.6],
+    [-4.6, 3.6, 2.6],
+    [0, 3.6, 1.2],
+  ] as const) {
+    parts.push({ geometry: box(0.4, h, 0.4), color: CONCRETE, position: [x, topY + h / 2, z] });
+    for (const dx of [-0.12, 0.12]) parts.push({ geometry: box(0.04, 0.9, 0.04), color: REBAR, position: [x + dx, topY + h + 0.45, z] });
+  }
+  for (let i = 0; i < 6; i++) parts.push({ geometry: box(0.04, 0.7, 0.04), color: REBAR, position: [1.5 + i * 0.5, topY + 0.35, 3.9] });
+
+  // Brick infill: ground floor mostly closed, first floor half done.
+  parts.push(
+    { geometry: box(4.2, 2.6, 0.3), color: BRICK, position: [-2.3, 1.65, 3.6] },
+    { geometry: box(4.2, 2.6, 0.3), color: BRICK, position: [2.3, 1.65, 3.6] },
+    { geometry: box(0.3, 2.6, 3.2), color: BRICK, position: [-4.6, 1.65, -1.8] },
+    { geometry: box(4.2, 1.4, 0.3), color: BRICK, position: [-2.3, 4.05, 3.6] },
+    { geometry: box(4.2, 2.6, 0.3), color: BRICK, position: [-2.3, 1.65, -3.6] },
+    { geometry: box(1.8, 0.9, 0.3), color: BRICK, position: [1.2, 3.8, -3.6] },
+  );
+
+  // Scaffolding on the front: posts, planks per floor, cross braces, green safety net.
+  const sz = -4.4;
+  for (const x of [-4.8, -2.4, 0, 2.4, 4.8]) parts.push({ geometry: box(0.08, 11, 0.08), color: SCAFFOLD, position: [x, 5.5, sz] });
+  for (let f = 1; f <= 3; f++) {
+    const y = 0.35 + f * FLOOR - 0.1;
+    parts.push(
+      { geometry: box(9.8, 0.08, 0.7), color: '#c49a5a', position: [0, y, sz + 0.05] },
+      { geometry: box(9.8, 0.06, 0.06), color: SCAFFOLD, position: [0, y + 1.0, sz - 0.3] },
+    );
+  }
+  for (let i = 0; i < 4; i++) {
+    parts.push({ geometry: box(0.06, 3.6, 0.06), color: SCAFFOLD, position: [-3.6 + i * 2.4, 4.8, sz - 0.32], rotation: [0, 0, i % 2 ? 0.58 : -0.58] });
+  }
+  parts.push({ geometry: box(4.6, 5.6, 0.04), color: '#4f9a5c', position: [2.4, 6.8, sz - 0.42] });
+
+  // Hoist mast on the right side.
+  const mastX = 5.7;
+  parts.push({ geometry: box(0.5, 12.5, 0.5), color: '#d49a00', position: [mastX, 6.25, -1.5] });
+  for (let y = 1.5; y < 12; y += 1.5) parts.push({ geometry: box(0.56, 0.08, 0.56), color: '#a87a00', position: [mastX, y, -1.5] });
+
+  // Bricks on pallets and cement bags at the foot.
+  parts.push(
+    { geometry: box(1.3, 0.15, 1.0), color: '#a8743f', position: [-2.5, 0.08, -6.0] },
+    { geometry: rbox(1.2, 0.7, 0.9, 0.05), color: BRICK, position: [-2.5, 0.5, -6.0] },
+    { geometry: box(1.3, 0.15, 1.0), color: '#a8743f', position: [-0.8, 0.08, -6.2] },
+    { geometry: rbox(1.2, 0.5, 0.9, 0.05), color: BRICK, position: [-0.8, 0.4, -6.2] },
+    { geometry: rbox(0.7, 0.25, 0.45, 0.1), color: '#e6dcc4', position: [1.0, 0.13, -6.0] },
+    { geometry: rbox(0.7, 0.25, 0.45, 0.1), color: '#e6dcc4', position: [1.1, 0.38, -6.05], rotation: [0, 0.3, 0] },
+  );
+
+  // The hoist cage glides up and down the mast.
+  const cage = part(
+    [
+      { geometry: rbox(1.6, 1.8, 1.6, 0.1), color: TOY.YELLOW, position: [mastX + 1.05, 1.1, -1.5] },
+      { geometry: box(0.06, 1.2, 1.3), color: '#4b4e53', position: [mastX + 1.86, 1.2, -1.5] },
+      { geometry: box(1.7, 0.08, 1.7), color: '#4b4e53', position: [mastX + 1.05, 2.04, -1.5] },
+    ],
+    [0, 0, 0],
+    { type: 'shuttle', vector: [0, 8.6, 0], period: 16 },
+  );
+  return model(parts, { parts: [cage] });
 }
 
 function crane(): PropModel {
@@ -873,6 +964,7 @@ const BUILDERS: Record<PropKind, () => PropModel> = {
   excavator,
   dumpTruck,
   crane,
+  unfinishedBuilding,
   pine,
   roundTree,
   rock,

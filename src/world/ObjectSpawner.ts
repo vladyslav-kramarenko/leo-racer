@@ -178,6 +178,17 @@ export class ObjectSpawner {
         visible = f >= a.from && f < a.to;
         break;
       }
+      case 'shuttle': {
+        // Smooth back-and-forth (ease in/out at both ends).
+        const k = 0.5 - 0.5 * Math.cos((2 * Math.PI * t) / a.period + phase);
+        this.m2.makeTranslation(
+          part.pivot.x + a.vector[0] * k,
+          part.pivot.y + a.vector[1] * k,
+          part.pivot.z + a.vector[2] * k,
+        );
+        this.m.multiplyMatrices(base, this.m2);
+        return;
+      }
       case 'slide': {
         const f = (t / a.period + phase / 6.283) % 1;
         this.m2.makeTranslation(

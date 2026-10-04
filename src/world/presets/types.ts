@@ -14,6 +14,7 @@ export type PropKind =
   | 'dumpTruck'
   | 'crane'
   | 'gravel'
+  | 'unfinishedBuilding'
   // Nature
   | 'pine'
   | 'roundTree'
