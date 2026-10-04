@@ -148,11 +148,25 @@ export interface PropsPreset {
   items: PropSpec[];
 }
 
-export type TrafficKind = 'car' | 'pickup' | 'van' | 'dumpTruck' | 'mixer' | 'tractor' | 'cityBus' | 'camper';
+export type TrafficKind =
+  | 'car'
+  | 'pickup'
+  | 'van'
+  | 'dumpTruck'
+  | 'mixer'
+  | 'tractor'
+  | 'cityBus'
+  | 'camper'
+  /** Low sports car; zooms past where the world lists it under `overtaking`. */
+  | 'sportsCar'
+  /** Light bar flashes red/blue (below 3 Hz). */
+  | 'police';
 
 export interface TrafficPreset {
   enabled: boolean;
   vehicles: TrafficKind[];
+  /** Kinds that come from behind and zoom past the bus here; elsewhere they drive like normal traffic. */
+  overtaking?: TrafficKind[];
 }
 
 export type AmbientEvent = 'clink' | 'chirp' | 'moo' | 'wave' | 'honk' | 'bell' | 'gull';

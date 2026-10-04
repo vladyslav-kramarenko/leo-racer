@@ -165,6 +165,8 @@ export const CONFIG = {
     maxVehicles: 8,
     sameDirectionSpeed: 0.65,
     oppositeDirectionSpeed: 0.75,
+    /** Overtakers (e.g. the sports car in Nature) drive this many times the bus speed. */
+    overtakeSpeed: 2.1,
     density: {
       off: { max: 0, intervalSec: [999, 999] },
       low: { max: 3, intervalSec: [10, 16] },

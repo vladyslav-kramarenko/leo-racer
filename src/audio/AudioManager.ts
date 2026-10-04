@@ -172,6 +172,42 @@ export class AudioManager {
     }
   }
 
+  /** A fast car zooming past: a falling engine note plus a soft whoosh. */
+  zoom(): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.master || !this.enabled) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(240, now);
+    osc.frequency.exponentialRampToValueAtTime(95, now + 0.9);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 900;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.07, now + 0.12);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 1.0);
+    osc.connect(lp).connect(g).connect(this.master);
+    osc.start(now);
+    osc.stop(now + 1.05);
+
+    this.whiteNoise ??= createWhiteNoise(ctx, 1);
+    const noise = ctx.createBufferSource();
+    noise.buffer = this.whiteNoise;
+    const band = ctx.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.setValueAtTime(2200, now);
+    band.frequency.exponentialRampToValueAtTime(700, now + 0.8);
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.0001, now);
+    ng.gain.exponentialRampToValueAtTime(0.05, now + 0.15);
+    ng.gain.exponentialRampToValueAtTime(0.0001, now + 0.85);
+    noise.connect(band).connect(ng).connect(this.master);
+    noise.start(now);
+    noise.stop(now + 0.9);
+  }
+
   /** "Pssht!" — school-bus air brake. */
   airBrake(): void {
     const ctx = this.ctx;

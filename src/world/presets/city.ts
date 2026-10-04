@@ -83,7 +83,8 @@ export const city: WorldPreset = {
       { kind: 'steamClock', weight: 1, minDistance: 1.2, maxDistance: 1.6, scale: [1, 1], maxPerChunk: 1, facing: 'traffic', side: 'right', every: { chunks: 7, offset: 1 } },
     ],
   },
-  traffic: { enabled: true, vehicles: ['car', 'car', 'cityBus', 'van', 'pickup'] },
+  // In town the sports car behaves: it just drives along with everyone else.
+  traffic: { enabled: true, vehicles: ['car', 'car', 'cityBus', 'van', 'pickup', 'car', 'sportsCar', 'police'] },
   // SkyTrain-style elevated line above the right sidewalk.
   guideway: {
     side: 'right',

@@ -76,6 +76,9 @@ export class Game {
     this.scenes.scene.add(this.bus.object);
     this.traffic = new TrafficManager(this.world.road, preset.traffic, options.trafficDensity);
     this.scenes.scene.add(this.traffic.group);
+    this.traffic.onPass(() => {
+      if (this.driving && !this.paused) this.audio.zoom();
+    });
     this.sprites = new DrawingSpriteLayer(this.world.road);
     this.sprites.onSpawn((id) => this.metrics.markImpression(id));
     this.scenes.scene.add(this.sprites.group);

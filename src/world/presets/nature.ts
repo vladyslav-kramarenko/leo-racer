@@ -60,7 +60,12 @@ export const nature: WorldPreset = {
       { kind: 'gondola', weight: 1, minDistance: 30, maxDistance: 34, scale: [1, 1], maxPerChunk: 1, facing: 'road', side: 'right', every: { chunks: 13, offset: 4 } },
     ],
   },
-  traffic: { enabled: true, vehicles: ['car', 'camper', 'pickup', 'van'] },
+  // Sea to Sky highway: campers, the odd sports car zooming past, an RCMP-style patrol.
+  traffic: {
+    enabled: true,
+    vehicles: ['car', 'camper', 'pickup', 'van', 'car', 'camper', 'sportsCar', 'police'],
+    overtaking: ['sportsCar'],
+  },
   audio: {
     engineBaseHz: 50,
     ambience: { noiseLevel: 0.06, noiseCutoff: 520, noiseSwellHz: 0.12, events: ['chirp', 'chirp', 'wave'], eventInterval: [2, 6] },

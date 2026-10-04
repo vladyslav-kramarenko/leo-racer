@@ -1,4 +1,5 @@
-import { box, cyl, ico, rbox, type ColoredPart } from './geometry';
+import * as THREE from 'three';
+import { box, cyl, extrudeProfile, ico, rbox, type ColoredPart } from './geometry';
 
 /**
  * Shared "toy" building blocks so every vehicle in the world looks like a sibling of the
@@ -246,5 +247,129 @@ export function tractorParts(): ColoredPart[] {
     // Mudguards over the rear wheels.
     { geometry: rbox(0.55, 0.12, 1.5, 0.05), color: GREEN, position: [-0.98, 1.95, 0.9] },
     { geometry: rbox(0.55, 0.12, 1.5, 0.05), color: GREEN, position: [0.98, 1.95, 0.9] },
+  ];
+}
+
+/** Upper half-disc on the body side behind a wheel, so the tyre reads as sitting in an arch. */
+function archShadow(x: number, z: number, r: number, y: number): ColoredPart {
+  const g = new THREE.CylinderGeometry(r, r, 0.02, 12, 1, false, 0, Math.PI);
+  g.rotateZ(Math.PI / 2);
+  return { geometry: g, color: TOY.BLACK, position: [x, y, z] };
+}
+
+/**
+ * 80s wedge supercar (Countach-style, simplified, no badges): the nose, bonnet and windscreen
+ * run in one sharp line, a low trapezoid cabin with boxy air intakes behind the side windows,
+ * NACA ducts on the doors, a big rear wing and fat rear tyres.
+ *
+ * The body and cabin are side profiles extruded across the width. Profile x runs along the car
+ * (front = +x), so rotating the extrusion by +90° about Y puts the nose at -Z.
+ */
+export function sportsCarParts(color: string): ColoredPart[] {
+  const TURN: V3 = [0, Math.PI / 2, 0];
+  const body = extrudeProfile(
+    [
+      [2.3, 0.3],
+      [2.32, 0.46],
+      [0.75, 0.8],
+      [-1.3, 0.86],
+      [-2.12, 0.93],
+      [-2.26, 0.88],
+      [-2.26, 0.34],
+      [-2.0, 0.24],
+      [1.9, 0.24],
+    ],
+    1.94,
+    0.03,
+  );
+  const cabin = extrudeProfile(
+    [
+      [0.8, 0.76],
+      [0.02, 1.12],
+      [-0.92, 1.12],
+      [-1.5, 0.84],
+      [-1.5, 0.76],
+    ],
+    1.36,
+    0.02,
+  );
+  const hoodTilt: V3 = [-0.216, 0, 0];
+  return [
+    { geometry: body, color, rotation: TURN },
+    { geometry: cabin, color: TOY.GLASS_DARK, rotation: TURN },
+    { geometry: rbox(1.3, 0.04, 0.9, 0.02), color, position: [0, 1.13, 0.45] },
+    // Boxy intakes behind the side windows, open at the front.
+    { geometry: rbox(0.26, 0.24, 0.56, 0.04), color, position: [-0.74, 1.0, 1.05] },
+    { geometry: rbox(0.26, 0.24, 0.56, 0.04), color, position: [0.74, 1.0, 1.05] },
+    { geometry: box(0.2, 0.17, 0.03), color: TOY.BLACK, position: [-0.74, 1.0, 0.77] },
+    { geometry: box(0.2, 0.17, 0.03), color: TOY.BLACK, position: [0.74, 1.0, 0.77] },
+    // NACA ducts on the doors.
+    { geometry: box(0.03, 0.1, 0.5), color: TOY.BLACK, position: [-0.985, 0.66, 0.25], rotation: [0.12, 0, 0] },
+    { geometry: box(0.03, 0.1, 0.5), color: TOY.BLACK, position: [0.985, 0.66, 0.25], rotation: [0.12, 0, 0] },
+    // Pop-up headlights (closed) on the bonnet, amber indicators in the nose, black lip.
+    { geometry: box(0.42, 0.025, 0.32), color: TOY.BLACK, position: [-0.55, 0.6, -1.75], rotation: hoodTilt },
+    { geometry: box(0.42, 0.025, 0.32), color: TOY.BLACK, position: [0.55, 0.6, -1.75], rotation: hoodTilt },
+    { geometry: box(0.3, 0.06, 0.04), color: TOY.INDICATOR, position: [-0.7, 0.4, -2.31] },
+    { geometry: box(0.3, 0.06, 0.04), color: TOY.INDICATOR, position: [0.7, 0.4, -2.31] },
+    { geometry: rbox(1.9, 0.07, 0.2, 0.03), color: TOY.BLACK, position: [0, 0.27, -2.2] },
+    // Big rear wing on two raked struts.
+    { geometry: rbox(1.98, 0.06, 0.44, 0.03), color, position: [0, 1.34, 2.0] },
+    { geometry: box(0.06, 0.42, 0.12), color, position: [-0.55, 1.12, 2.02], rotation: [-0.3, 0, 0] },
+    { geometry: box(0.06, 0.42, 0.12), color, position: [0.55, 1.12, 2.02], rotation: [-0.3, 0, 0] },
+    // Tail: dark panel, wide tail lights, four exhausts.
+    { geometry: box(1.88, 0.3, 0.04), color: TOY.BLACK, position: [0, 0.62, 2.27] },
+    { geometry: box(0.46, 0.16, 0.05), color: TOY.TAILLIGHT, position: [-0.64, 0.66, 2.29] },
+    { geometry: box(0.46, 0.16, 0.05), color: TOY.TAILLIGHT, position: [0.64, 0.66, 2.29] },
+    { geometry: box(0.16, 0.16, 0.05), color: TOY.INDICATOR, position: [-0.3, 0.66, 2.29] },
+    { geometry: box(0.16, 0.16, 0.05), color: TOY.INDICATOR, position: [0.3, 0.66, 2.29] },
+    ...[-0.38, -0.25, 0.25, 0.38].map(
+      (x): ColoredPart => ({ geometry: cyl(0.05, 0.05, 0.16, 8), color: TOY.CHROME, position: [x, 0.36, 2.28], rotation: FACING_Z }),
+    ),
+    // Side skirts and wheel arches.
+    { geometry: rbox(1.97, 0.08, 3.4, 0.03), color: TOY.BLACK, position: [0, 0.28, 0] },
+    archShadow(-0.985, -1.35, 0.46, 0.36),
+    archShadow(0.985, -1.35, 0.46, 0.36),
+    archShadow(-0.985, 1.45, 0.52, 0.4),
+    archShadow(0.985, 1.45, 0.52, 0.4),
+    // Low-profile tyres, fat at the back.
+    ...toyWheel(-0.86, -1.35, 0.35, 0.3, '#5a5e66'),
+    ...toyWheel(0.86, -1.35, 0.35, 0.3, '#5a5e66'),
+    ...toyWheel(-0.85, 1.45, 0.4, 0.44, '#5a5e66'),
+    ...toyWheel(0.85, 1.45, 0.4, 0.44, '#5a5e66'),
+  ];
+}
+
+/**
+ * Police SUV in the style of the Ford Police Interceptor Utility used by Canadian patrols
+ * (simplified, no lettering): white body, dark-blue door band, yellow pinstripe, push bar,
+ * and a roof light bar. `lit` picks which half of the light bar is bright (flashing frames).
+ */
+export function policeParts(lit: 'red' | 'blue'): ColoredPart[] {
+  const NAVY = '#1d2f6b';
+  const red = lit === 'red' ? '#ff2a1a' : '#5a1a16';
+  const blue = lit === 'blue' ? '#2a6bff' : '#16244f';
+  return [
+    { geometry: rbox(1.95, 0.85, 4.8, 0.24, 2), color: TOY.WHITE, position: [0, 0.95, 0] },
+    { geometry: rbox(1.82, 0.72, 2.7, 0.18, 2), color: TOY.GLASS_DARK, position: [0, 1.7, 0.35] },
+    { geometry: rbox(1.88, 0.12, 2.5, 0.06, 1), color: TOY.WHITE, position: [0, 2.08, 0.4] },
+    // Door band and pinstripe.
+    { geometry: rbox(1.99, 0.3, 3.3, 0.06, 1), color: NAVY, position: [0, 0.82, 0.2] },
+    { geometry: rbox(1.99, 0.06, 3.3, 0.02, 1), color: '#ffd23f', position: [0, 1.02, 0.2] },
+    // Light bar.
+    { geometry: rbox(1.3, 0.12, 0.42, 0.05, 1), color: TOY.BLACK, position: [0, 2.2, 0.0] },
+    { geometry: rbox(0.6, 0.16, 0.36, 0.06, 1), color: red, position: [-0.33, 2.33, 0.0] },
+    { geometry: rbox(0.6, 0.16, 0.36, 0.06, 1), color: blue, position: [0.33, 2.33, 0.0] },
+    // Push bar, grille, lights.
+    { geometry: rbox(1.5, 0.5, 0.12, 0.05, 1), color: TOY.BLACK, position: [0, 0.75, -2.5] },
+    { geometry: rbox(1.1, 0.28, 0.05, 0.03), color: TOY.BLACK, position: [0, 1.05, -2.41] },
+    ...headlights([-0.68, 0.68], 1.08, -2.41, 0.12),
+    ...taillights([-0.8, 0.8], 1.2, 2.41, 0.2, 0.32),
+    bumper(1.99, 0.5, 2.38, TOY.BLACK),
+    { geometry: rbox(0.14, 0.12, 0.22, 0.04), color: TOY.BLACK, position: [-1.0, 1.55, -0.95] },
+    { geometry: rbox(0.14, 0.12, 0.22, 0.04), color: TOY.BLACK, position: [1.0, 1.55, -0.95] },
+    ...toyWheel(-0.92, -1.55, 0.44, 0.32, TOY.DARK),
+    ...toyWheel(0.92, -1.55, 0.44, 0.32, TOY.DARK),
+    ...toyWheel(-0.92, 1.55, 0.44, 0.32, TOY.DARK),
+    ...toyWheel(0.92, 1.55, 0.44, 0.32, TOY.DARK),
   ];
 }

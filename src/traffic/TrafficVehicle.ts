@@ -8,6 +8,8 @@ import {
   dumpTruckParts,
   mixerParts,
   pickupParts,
+  policeParts,
+  sportsCarParts,
   tractorParts,
   vanParts,
 } from '../world/toyParts';
@@ -27,6 +29,10 @@ export interface TrafficVehicle {
   speed: number;
   halfWidth: number;
   age: number;
+  /** Comes from behind and passes the bus. */
+  overtaking: boolean;
+  /** Already went past the bus (for the "zoom" sound). */
+  passed: boolean;
 }
 
 /** Geometry variants per kind (cars come in several colours). Built once, shared by the pool. */
@@ -61,6 +67,14 @@ export function buildTrafficGeometries(kinds: readonly TrafficKind[]): Map<Traff
       case 'camper':
         out.set(kind, [buildColoredGeometry(camperParts())]);
         break;
+      case 'sportsCar':
+        // Classic 80s supercar colours.
+        out.set(kind, ['#e8302a', '#f2f2f2', '#ffc21a'].map((c) => buildColoredGeometry(sportsCarParts(c))));
+        break;
+      case 'police':
+        // Two frames of the flashing light bar; the manager alternates them.
+        out.set(kind, [buildColoredGeometry(policeParts('red')), buildColoredGeometry(policeParts('blue'))]);
+        break;
     }
   }
   return out;
@@ -75,7 +89,16 @@ export const HALF_WIDTH: Record<TrafficKind, number> = {
   tractor: 1.25,
   cityBus: 1.3,
   camper: 1.05,
+  sportsCar: 1.0,
+  police: 1.05,
 };
 
+/** Kinds whose geometry variants are animation frames (flashing lights), not colour choices. */
+export const FLASHING: ReadonlySet<TrafficKind> = new Set(['police']);
+
 /** Slow vehicles (tractors) travel slower than the rest. */
-export const SPEED_FACTOR: Partial<Record<TrafficKind, number>> = { tractor: 0.6, mixer: 0.85, dumpTruck: 0.85 };
+export const SPEED_FACTOR: Partial<Record<TrafficKind, number>> = {
+  tractor: 0.6,
+  mixer: 0.85,
+  dumpTruck: 0.85,
+};

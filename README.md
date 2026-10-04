@@ -37,6 +37,8 @@ Leo Racer is a browser driving toy for children aged 2–4.
   - A big touch brake zone at the bottom of the screen.
 - **Manual ↔ autopilot:** any steering takes over instantly. Autopilot blends back in after 8 s idle. There are no visible modes.
 - **Built-in traffic:** cars, trucks, tractors and buses drive in their lanes and make way for the school bus. Parents set the density: Off, Low, Normal or Busy.
+  - **Police:** a police SUV with a red/blue light bar flashing at 1.5 Hz (below the 3 Hz photosensitivity limit) drives in Nature and City.
+  - **Sports car:** an 80s wedge supercar zooms past the bus on the Nature highway and drives calmly in City.
 - **Draw Your World:** the photo is resized and its metadata stripped on the device. AI then cleans the drawing and suggests MOVES or STAYS, and a parent can override that.
   - A drawing that STAYS stands by the road.
   - A drawing that MOVES drives in a lane or alongside the road.

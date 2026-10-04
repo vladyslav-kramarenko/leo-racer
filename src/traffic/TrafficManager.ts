@@ -3,7 +3,16 @@ import { CONFIG } from '../game/config';
 import { avoidanceTarget, overlapsBus } from '../world/laneAvoidance';
 import type { TrafficKind, TrafficPreset } from '../world/presets/types';
 import type { RoadGenerator } from '../world/RoadGenerator';
-import { buildTrafficGeometries, HALF_WIDTH, SPEED_FACTOR, type TrafficVehicle } from './TrafficVehicle';
+import {
+  buildTrafficGeometries,
+  FLASHING,
+  HALF_WIDTH,
+  SPEED_FACTOR,
+  type TrafficVehicle,
+} from './TrafficVehicle';
+
+/** Light bar alternation for police cars, Hz per colour (well below 3 flashes/s). */
+const FLASH_HZ = 1.5;
 
 export type TrafficDensity = keyof typeof CONFIG.traffic.density;
 export const TRAFFIC_DENSITIES: readonly TrafficDensity[] = ['off', 'low', 'normal', 'busy'];
@@ -26,6 +35,9 @@ export class TrafficManager {
   private readonly material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   private density: TrafficDensity;
   private nextSpawnIn = 2;
+  private passListener: ((kind: TrafficKind) => void) | null = null;
+  /** Overtakers start making room early, from well behind the bus. */
+  private readonly overtakeLanes = { ...CONFIG.lanes, lookBehind: 45 };
 
   constructor(
     private readonly road: RoadGenerator,
@@ -40,7 +52,19 @@ export class TrafficManager {
       mesh.visible = false;
       mesh.matrixAutoUpdate = true;
       this.group.add(mesh);
-      this.pool.push({ mesh, active: false, kind: 'car', s: 0, d: 0, laneD: 0, speed: 0, halfWidth: 1, age: 0 });
+      this.pool.push({
+        mesh,
+        active: false,
+        kind: 'car',
+        s: 0,
+        d: 0,
+        laneD: 0,
+        speed: 0,
+        halfWidth: 1,
+        age: 0,
+        overtaking: false,
+        passed: false,
+      });
     }
   }
 
@@ -63,6 +87,11 @@ export class TrafficManager {
     return this.pool.reduce((n, v) => n + (v.active ? 1 : 0), 0);
   }
 
+  /** Called when an overtaking vehicle goes past the bus (for a "zoom" sound). */
+  onPass(listener: (kind: TrafficKind) => void): void {
+    this.passListener = listener;
+  }
+
   update(dt: number, timeSec: number, bus: BusState): void {
     const density = CONFIG.traffic.density[this.density];
     this.nextSpawnIn -= dt;
@@ -79,14 +108,19 @@ export class TrafficManager {
       v.s += v.speed * dt;
       const target = avoidanceTarget(
         { s: v.s, laneD: v.laneD, d: v.d, busS: bus.s, busD: bus.d, clearance: 1.35 + v.halfWidth },
-        lanes,
+        v.overtaking ? this.overtakeLanes : lanes,
       );
       const step = lanes.dodgeSpeed * dt;
       const vd = Math.abs(target - v.d) <= step ? 0 : Math.sign(target - v.d) * lanes.dodgeSpeed;
       v.d = Math.abs(target - v.d) <= step ? target : v.d + Math.sign(target - v.d) * step;
 
       const ds = v.s - bus.s;
-      if (ds < -30 || ds > 280 || v.age > 120 || overlapsBus(v.s, v.d, bus.s, bus.d, v.halfWidth)) {
+      if (v.overtaking && !v.passed && ds > 0) {
+        v.passed = true;
+        this.passListener?.(v.kind);
+      }
+      const behindLimit = v.overtaking && !v.passed ? -100 : -30;
+      if (ds < behindLimit || ds > 280 || v.age > 120 || overlapsBus(v.s, v.d, bus.s, bus.d, v.halfWidth)) {
         this.release(v);
         continue;
       }
@@ -102,9 +136,11 @@ export class TrafficManager {
     if (!variants?.length) return;
 
     const cruise = CONFIG.driving.speed * (SPEED_FACTOR[kind] ?? 1);
-    const oncoming = this.rng() < 0.6;
-    const laneD = oncoming ? -CONFIG.lanes.laneOffset : CONFIG.lanes.laneOffset;
-    const s = oncoming ? bus.s + 190 + this.rng() * 30 : bus.s + 130 + this.rng() * 40;
+    const overtaking = this.preset.overtaking?.includes(kind) ?? false;
+    const oncoming = !overtaking && this.rng() < 0.6;
+    // Overtakers come from behind in the left (passing) lane.
+    const laneD = oncoming || overtaking ? -CONFIG.lanes.laneOffset : CONFIG.lanes.laneOffset;
+    const s = overtaking ? bus.s - 75 : oncoming ? bus.s + 190 + this.rng() * 30 : bus.s + 130 + this.rng() * 40;
     // Keep a gap to anything already in that lane.
     if (this.pool.some((o) => o.active && Math.sign(o.laneD) === Math.sign(laneD) && Math.abs(o.s - s) < 25)) return;
 
@@ -113,10 +149,16 @@ export class TrafficManager {
     v.s = s;
     v.laneD = laneD;
     v.d = laneD;
-    v.speed = oncoming ? -cruise * CONFIG.traffic.oppositeDirectionSpeed : cruise * CONFIG.traffic.sameDirectionSpeed;
+    v.speed = overtaking
+      ? CONFIG.driving.speed * CONFIG.traffic.overtakeSpeed
+      : oncoming
+        ? -cruise * CONFIG.traffic.oppositeDirectionSpeed
+        : cruise * CONFIG.traffic.sameDirectionSpeed;
     v.halfWidth = HALF_WIDTH[kind];
     v.age = 0;
-    v.mesh.geometry = variants[Math.floor(this.rng() * variants.length)];
+    v.overtaking = overtaking;
+    v.passed = false;
+    v.mesh.geometry = FLASHING.has(kind) ? variants[0] : variants[Math.floor(this.rng() * variants.length)];
     v.mesh.visible = true;
   }
 
@@ -126,6 +168,10 @@ export class TrafficManager {
   }
 
   private pose(v: TrafficVehicle, vd: number, timeSec: number): void {
+    if (FLASHING.has(v.kind)) {
+      const frames = this.geometries.get(v.kind)!;
+      v.mesh.geometry = frames[Math.floor(timeSec * FLASH_HZ * 2) % frames.length];
+    }
     const f = this.road.frame(v.s);
     v.mesh.position.set(f.x + f.rx * v.d, Math.abs(Math.sin(timeSec * 7 + v.s)) * 0.02, f.z + f.rz * v.d);
     // Face the direction of travel (including sideways motion while making way).

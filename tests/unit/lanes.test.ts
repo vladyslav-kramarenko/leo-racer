@@ -103,3 +103,78 @@ describe('built-in traffic', () => {
     expect(traffic.activeCount()).toBe(0);
   });
 });
+
+describe('sports car and police', () => {
+  const preset = getPreset('nature');
+  const road = new RoadGenerator(preset.road.curve);
+
+  it('a sports car comes from behind, passes the bus and announces it once', () => {
+    const traffic = new TrafficManager(road, { enabled: true, vehicles: ['sportsCar'], overtaking: ['sportsCar'] }, 'busy', () => 0.4);
+    let passes = 0;
+    traffic.onPass((kind) => {
+      expect(kind).toBe('sportsCar');
+      passes++;
+    });
+    let s = 0;
+    for (let t = 0; t < 40; t += 0.05) {
+      s += CONFIG.driving.speed * 0.05;
+      traffic.update(0.05, t, { s, d: 0 });
+    }
+    expect(passes).toBeGreaterThan(0);
+    // Each passing car is counted exactly once.
+    expect(passes).toBeLessThanOrEqual(Math.ceil(40 / CONFIG.traffic.density.busy.intervalSec[0]) + 1);
+  });
+
+  it('the overtaking car makes way early instead of being recycled on top of the bus', () => {
+    const traffic = new TrafficManager(road, { enabled: true, vehicles: ['sportsCar'], overtaking: ['sportsCar'] }, 'busy', () => 0.4);
+    let passes = 0;
+    traffic.onPass(() => passes++);
+    let s = 0;
+    for (let t = 0; t < 20; t += 0.05) {
+      s += CONFIG.driving.speed * 0.05;
+      // Bus wandering across its whole corridor.
+      traffic.update(0.05, t, { s, d: Math.sin(t) * 3 });
+    }
+    expect(passes).toBeGreaterThan(0);
+  });
+
+  it('without `overtaking`, a sports car is ordinary traffic: never starts behind the bus', () => {
+    const traffic = new TrafficManager(road, { enabled: true, vehicles: ['sportsCar'] }, 'busy', () => 0.4);
+    let passes = 0;
+    traffic.onPass(() => passes++);
+    const pool = (traffic as unknown as { pool: { active: boolean; s: number; speed: number }[] }).pool;
+    let s = 0;
+    for (let t = 0; t < 30; t += 0.05) {
+      s += CONFIG.driving.speed * 0.05;
+      traffic.update(0.05, t, { s, d: 0 });
+      for (const v of pool) {
+        if (!v.active) continue;
+        expect(Math.abs(v.speed)).toBeLessThanOrEqual(CONFIG.driving.speed);
+      }
+    }
+    expect(passes).toBe(0);
+  });
+
+  it('police light bar alternates frames below 3 flashes per second', () => {
+    const traffic = new TrafficManager(road, { enabled: true, vehicles: ['police'] }, 'busy', () => 0.3);
+    const mesh = () =>
+      (traffic as unknown as { pool: { active: boolean; mesh: { geometry: unknown } }[] }).pool.find((v) => v.active)?.mesh;
+    let s = 0;
+    const seen: unknown[] = [];
+    let changes = 0;
+    let last: unknown = null;
+    for (let t = 0; t < 12; t += 0.02) {
+      s += CONFIG.driving.speed * 0.02;
+      traffic.update(0.02, t, { s, d: 0 });
+      const g = mesh()?.geometry;
+      if (!g) continue;
+      if (!seen.includes(g)) seen.push(g);
+      if (last && g !== last && t > 6) changes++;
+      last = g;
+    }
+    expect(seen.length).toBe(2);
+    // Over the last 6 s: at most 3 changes per second.
+    expect(changes).toBeLessThanOrEqual(6 * 3);
+    expect(changes).toBeGreaterThan(0);
+  });
+});

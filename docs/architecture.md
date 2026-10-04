@@ -78,6 +78,8 @@ All tunables live in [`src/game/config.ts`](../src/game/config.ts).
   - When the bus approaches, each one makes way via [`laneAvoidance.ts`](../src/world/laneAvoidance.ts): its own shoulder first, otherwise the other side.
   - There are no collisions. As a last resort an overlapping NPC is recycled.
   - Parent density setting: Off, Low, Normal or Busy.
+  - **Overtakers:** a world can list kinds under `traffic.overtaking`. Those come from behind in the passing lane at 2.1× bus speed and play a soft "zoom" as they pass. Elsewhere the same kinds drive like normal traffic.
+  - **Flashing lights:** police cars alternate two geometry frames, so the light bar flashes red/blue at 1.5 Hz.
 - **World switching** saves `worldId` and reloads the page rather than hot-swapping Three.js resources.
 - **Toy style:** all models share rounded or chamfered shapes and common parts from [`toyParts.ts`](../src/world/toyParts.ts) (wheels with rims, lights, framed glass).
   Instanced props use a 44-triangle chamfer box; only hero silhouettes (bus, car bodies) use smooth rounding.
