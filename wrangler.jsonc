@@ -20,7 +20,9 @@
   ],
   "vars": {
     "AI_PROVIDER": "mock",
-    "AI_MONTHLY_LIMIT": "20"
+    "AI_MONTHLY_LIMIT": "20",
+    "AI_GLOBAL_DAILY_LIMIT": "200",
+    "AI_RATE_LIMIT_PER_MINUTE": "3"
   },
   "observability": { "enabled": true }
 }

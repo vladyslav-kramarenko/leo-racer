@@ -14,7 +14,7 @@ export const construction: WorldPreset = {
     hemiSky: '#cfeaff',
     hemiGround: '#b98b53',
     hemiIntensity: 1.3,
-    hillColors: ['#9ccf6a', '#86bf5a', '#b4d97c'],
+    hills: { colors: ['#9ccf6a', '#86bf5a', '#b4d97c'], height: [14, 36], width: [26, 52] },
   },
   terrain: {
     base: '#d9b273',
@@ -46,6 +46,9 @@ export const construction: WorldPreset = {
       { kind: 'crane', weight: 0.8, minDistance: 16, maxDistance: 30, scale: [1, 1.2], maxPerChunk: 1 },
     ],
   },
-  traffic: { enabled: false },
-  audio: { ambient: 'construction', engineBaseHz: 52 },
+  traffic: { enabled: true, vehicles: ['car', 'pickup', 'dumpTruck', 'mixer', 'van'] },
+  audio: {
+    engineBaseHz: 52,
+    ambience: { noiseLevel: 0.05, noiseCutoff: 700, events: ['clink'], eventInterval: [2.5, 7.5] },
+  },
 };

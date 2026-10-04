@@ -1,9 +1,29 @@
 import { ACCEPTED_TYPES, preprocessImage, requestProcessing } from '../drawings/DrawingProcessor';
 import type { DrawingManager } from '../drawings/DrawingManager';
+import type { DrawingFrequency } from '../drawings/DrawingSprite';
 import { effectiveCanMove, type CustomAsset } from '../drawings/DrawingStorage';
 import { getInstallationId, loadSettings, saveSettings } from '../storage/settings';
 import { clear, h } from './dom';
 import type { Screen } from './ParentMenu';
+
+/** Rare / Normal / Often — no numeric spawn rates for parents. */
+function frequencyControl(initial: DrawingFrequency, onChange: (f: DrawingFrequency) => void): HTMLElement {
+  const options: [DrawingFrequency, string][] = [
+    ['rare', 'Rare'],
+    ['normal', 'Normal'],
+    ['often', 'Often'],
+  ];
+  const buttons = options.map(([value, label]) => {
+    const b = h('button', { type: 'button', class: 'segment small', 'data-testid': `frequency-${value}` }, label);
+    b.addEventListener('click', () => {
+      buttons.forEach((x, i) => x.classList.toggle('active', options[i][0] === value));
+      onChange(value);
+    });
+    b.classList.toggle('active', value === initial);
+    return b;
+  });
+  return h('div', { class: 'segmented' }, ...buttons);
+}
 
 /** MOVES / STAYS segmented control. AI classification is only a suggestion. */
 function movesToggle(initial: boolean, onChange: (moves: boolean) => void): HTMLElement {
@@ -119,7 +139,7 @@ export function createAddDrawingScreen(drawings: DrawingManager): Screen {
         h(
           'div',
           { class: 'button-row' },
-          result.reason !== 'quota'
+          result.reason !== 'quota' && result.reason !== 'globalLimit'
             ? h('button', { type: 'button', class: 'menu-button primary', onclick: () => process(resized) }, 'TRY AGAIN')
             : null,
           h(
@@ -195,6 +215,7 @@ export function createManageDrawingsScreen(drawings: DrawingManager): Screen {
               'div',
               { class: 'drawing-controls' },
               movesToggle(effectiveCanMove(asset), (moves) => void drawings.setMoves(asset.id, moves)),
+              frequencyControl(asset.frequency ?? 'normal', (f) => void drawings.setFrequency(asset.id, f)),
               h('span', { class: 'hint' }, asset.source === 'ai' ? 'AI cleaned' : 'Original'),
               del,
             ),

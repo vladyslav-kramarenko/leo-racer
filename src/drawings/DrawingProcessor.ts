@@ -32,7 +32,7 @@ export async function preprocessImage(file: Blob, maxSide: number = CONFIG.drawi
   }
 }
 
-export type ProcessFailure = 'quota' | 'unauthorized' | 'failed' | 'network' | 'timeout';
+export type ProcessFailure = 'quota' | 'globalLimit' | 'rateLimited' | 'unauthorized' | 'failed' | 'network' | 'timeout';
 
 export type ProcessResult =
   | { ok: true; image: Blob; canMove: boolean; confidence: number | null }
@@ -40,6 +40,8 @@ export type ProcessResult =
 
 export const FAILURE_MESSAGES: Record<ProcessFailure, string> = {
   quota: 'AI drawing limit reached.',
+  globalLimit: 'AI drawing limit reached for today. Please try again tomorrow.',
+  rateLimited: 'Too many drawings at once. Please wait a minute and try again.',
   unauthorized: 'AI access code is missing or wrong.',
   failed: 'AI processing failed.',
   network: 'AI processing failed. Check the internet connection.',
@@ -67,7 +69,7 @@ export async function requestProcessing(
       headers: accessToken ? { 'X-Leo-Alpha-Token': accessToken } : {},
       signal: controller.signal,
     });
-    if (response.status === 429) return fail('quota');
+    if (response.status === 429) return fail(await limitReason(response));
     if (response.status === 401 || response.status === 403) return fail('unauthorized');
     if (!response.ok) return fail('failed');
 
@@ -93,4 +95,15 @@ export async function requestProcessing(
 
 function fail(reason: ProcessFailure): ProcessResult {
   return { ok: false, reason, message: FAILURE_MESSAGES[reason] };
+}
+
+async function limitReason(response: Response): Promise<ProcessFailure> {
+  try {
+    const body = (await response.json()) as { error?: { code?: string } };
+    if (body.error?.code === 'rate_limited') return 'rateLimited';
+    if (body.error?.code === 'global_quota_exceeded') return 'globalLimit';
+  } catch {
+    // Fall through to the generic quota message.
+  }
+  return 'quota';
 }

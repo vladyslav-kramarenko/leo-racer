@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_WORLD_ID, getPreset, listPresets, validatePreset } from '../../src/world/presets';
+import { buildPropModel, PROP_KINDS } from '../../src/world/props';
 import { RoadGenerator } from '../../src/world/RoadGenerator';
 
 describe('world preset loading', () => {
@@ -19,13 +20,48 @@ describe('world preset loading', () => {
     for (const preset of listPresets()) expect(validatePreset(preset)).toEqual([]);
   });
 
-  it('construction has 5–7+ kinds of props', () => {
-    const kinds = new Set(getPreset('construction').props.items.map((p) => p.kind));
-    expect(kinds.size).toBeGreaterThanOrEqual(5);
+  it('ships four worlds, each loadable by id', () => {
+    expect(listPresets().map((p) => p.id)).toEqual(['construction', 'nature', 'farm', 'city']);
+    for (const id of ['construction', 'nature', 'farm', 'city']) expect(getPreset(id).id).toBe(id);
+  });
+
+  it('every world has 5+ kinds of props', () => {
+    for (const preset of listPresets()) {
+      const kinds = new Set(preset.props.items.map((p) => p.kind));
+      expect(kinds.size, preset.id).toBeGreaterThanOrEqual(5);
+    }
+  });
+
+  it('every prop kind used by a preset builds, and animated parts are safe', () => {
+    for (const kind of PROP_KINDS) {
+      const model = buildPropModel(kind);
+      expect(model.body.getAttribute('position').count, kind).toBeGreaterThan(0);
+      for (const part of model.parts ?? []) {
+        if (part.anim.type === 'blink') expect(part.anim.hz, `${kind} blink`).toBeLessThan(3);
+      }
+    }
+    const used = new Set(listPresets().flatMap((p) => [...p.props.items.map((i) => i.kind), p.props.shoulderProp ?? 'cone']));
+    for (const kind of used) expect(PROP_KINDS).toContain(kind);
+  });
+
+  it('nothing is placed inside the driving corridor', () => {
+    const edge = 6.5;
+    for (const preset of listPresets()) {
+      for (const item of preset.props.items) {
+        // Bus can reach 3.3 m + half its width 1.25 m.
+        expect(edge + item.minDistance, `${preset.id}/${item.kind}`).toBeGreaterThan(4.55);
+      }
+    }
   });
 
   it('validation catches broken presets', () => {
     const broken = { ...getPreset('construction'), props: { perChunk: [3, 1] as [number, number], shoulderCones: 0, items: [] } };
+    expect(validatePreset(broken).length).toBeGreaterThan(0);
+    const corridor = {
+      ...getPreset('city'),
+      props: { ...getPreset('city').props, items: [{ kind: 'house' as const, weight: 1, minDistance: -3, maxDistance: 0, scale: [1, 1] as [number, number], maxPerChunk: 1 }] },
+    };
+    expect(validatePreset(corridor).join()).toContain('driving corridor');
     expect(validatePreset(broken).length).toBeGreaterThan(0);
   });
 });

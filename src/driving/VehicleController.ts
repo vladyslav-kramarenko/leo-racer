@@ -26,6 +26,8 @@ export interface VehicleState {
  */
 export class VehicleController {
   readonly state: VehicleState;
+  /** Runtime multiplier on cruise speed (session ending slows to 0). Never mutates config. */
+  private cruiseScale = 1;
 
   constructor(private readonly cfg: DrivingConfig = CONFIG.driving) {
     this.state = {
@@ -39,15 +41,19 @@ export class VehicleController {
     };
   }
 
+  setCruiseScale(scale: number): void {
+    this.cruiseScale = clamp(Number.isFinite(scale) ? scale : 1, 0, 1);
+  }
+
   update(dtSec: number, steering: number, braking = false): VehicleState {
     const s = this.state;
     const dt = clamp(Number.isFinite(dtSec) ? dtSec : 0, 0, 0.1);
     s.steering = clamp(Number.isFinite(steering) ? steering : 0, -1, 1);
     s.braking = braking === true;
 
-    // Gentle braking and gentle pick-up; never reverses.
-    const rate = s.braking ? this.cfg.brakeDecel : this.cfg.acceleration;
-    const target = s.braking ? 0 : this.cfg.speed;
+    // Gentle braking and gentle pick-up; never reverses. Slowing to a lower target uses the brakes.
+    const target = s.braking ? 0 : this.cfg.speed * this.cruiseScale;
+    const rate = target < s.speed ? this.cfg.brakeDecel : this.cfg.acceleration;
     s.speed = approach(s.speed, target, rate * dt);
     s.progress += s.speed * dt;
 

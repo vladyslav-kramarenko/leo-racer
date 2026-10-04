@@ -1,4 +1,5 @@
 import type { WheelCalibration } from '../input/SteeringState';
+import type { TrafficDensity } from '../traffic/TrafficManager';
 
 export interface Settings {
   soundOn: boolean;
@@ -6,6 +7,12 @@ export interface Settings {
   calibration: WheelCalibration | null;
   /** Shared alpha access code for the AI endpoint (entered by a parent). */
   alphaToken: string;
+  /** Session play-time limit in minutes; null = unlimited. */
+  playTimeMinutes: number | null;
+  trafficDensity: TrafficDensity;
+  /** null = automatic (on for touch-first devices). */
+  tiltEnabled: boolean | null;
+  tiltInvert: boolean;
 }
 
 const SETTINGS_KEY = 'leo.settings';
@@ -16,6 +23,10 @@ const DEFAULTS: Settings = {
   worldId: 'construction',
   calibration: null,
   alphaToken: '',
+  playTimeMinutes: null,
+  trafficDensity: 'normal',
+  tiltEnabled: null,
+  tiltInvert: false,
 };
 
 function storage(): Storage | null {

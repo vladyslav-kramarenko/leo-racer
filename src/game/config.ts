@@ -10,6 +10,22 @@ export const CONFIG = {
     returnMs: 320,
   },
 
+  tilt: {
+    /** Tilt within ±deadZoneDeg of centre is ignored. */
+    deadZoneDeg: 4,
+    /** Tilt at which steering reaches full lock. */
+    fullLockDeg: 28,
+    /** Low-pass factor per 60 Hz frame (0..1, higher = more responsive). */
+    smoothing: 0.18,
+    /** Change needed for tilt to take steering ownership from another device. */
+    activityThreshold: 0.05,
+  },
+
+  touch: {
+    /** Bottom fraction of the screen that acts as the brake pedal. */
+    brakeZone: 0.28,
+  },
+
   gamepad: {
     /** Axis used before the wheel has been calibrated. */
     defaultAxis: 0,
@@ -26,7 +42,7 @@ export const CONFIG = {
   },
 
   driving: {
-    /** Constant forward speed in m/s (~27 km/h). */
+    /** Constant forward speed in m/s (~30 km/h). */
     speed: 8.3,
     /** Braking deceleration, m/s² (7.5 m/s → stop in ~1.2 s). */
     brakeDecel: 6,
@@ -46,6 +62,16 @@ export const CONFIG = {
     softSpring: 5,
     /** Maximum visual yaw relative to the road, radians. */
     maxYaw: 0.28,
+  },
+
+  session: {
+    /** Gentle ending: drive on, pull over, slow down, stop. */
+    endingDurationMs: 25_000,
+    /** Ending progress (0..1) at which slowing down begins / the bus is stopped. */
+    slowFrom: 0.4,
+    stopAt: 0.88,
+    /** Lateral offset of the pull-off spot (right shoulder, inside the soft limit). */
+    pullOverOffset: 2.2,
   },
 
   autopilot: {
@@ -114,6 +140,37 @@ export const CONFIG = {
     staticSpacing: { min: 30, max: 55 },
     movingIntervalSec: { min: 8, max: 16 },
     spawnDistance: 150,
+    /** Share of moving drawings that use real lanes instead of the roadside. */
+    laneMovingChance: 0.45,
+    /** Relative spawn weight per drawing frequency setting. */
+    frequencyWeight: { rare: 0.35, normal: 1, often: 2.5 },
+  },
+
+  lanes: {
+    /** Lane centre offset from the road centre (right-hand traffic: same direction on the right). */
+    laneOffset: 1.8,
+    /** Where NPCs pull over to make way for the bus. */
+    shoulderOffset: 5.6,
+    /** Minimum sideways gap to the bus (centre to centre) before an NPC moves aside. */
+    clearance: 2.9,
+    /** NPCs start moving aside when the bus is this close along the road. */
+    lookAhead: 32,
+    lookBehind: 10,
+    /** Sideways speed of an NPC making way, m/s. */
+    dodgeSpeed: 3.2,
+  },
+
+  traffic: {
+    /** Pool size; also the hard cap for the busiest setting. */
+    maxVehicles: 8,
+    sameDirectionSpeed: 0.65,
+    oppositeDirectionSpeed: 0.75,
+    density: {
+      off: { max: 0, intervalSec: [999, 999] },
+      low: { max: 3, intervalSec: [10, 16] },
+      normal: { max: 5, intervalSec: [5, 9] },
+      busy: { max: 8, intervalSec: [2.5, 5] },
+    },
   },
 } as const;
 

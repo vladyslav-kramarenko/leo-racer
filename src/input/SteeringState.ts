@@ -1,6 +1,6 @@
 /** Shared steering helpers and types. Steering is always normalised to -1 (left) … +1 (right). */
 
-export type InputSource = 'none' | 'keyboard' | 'gamepad';
+export type InputSource = 'none' | 'keyboard' | 'gamepad' | 'tilt' | 'touch';
 
 export interface SteeringInput {
   /** -1 = full left, 0 = centre, +1 = full right. */

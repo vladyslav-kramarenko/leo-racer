@@ -37,6 +37,34 @@ describe('SteeringMixer', () => {
       expect(m.getMode()).toBe('autopilot');
     });
 
+    it('detects a slow, steady turn (small per-frame change that accumulates)', () => {
+      const m = new SteeringMixer(opts);
+      // 0 → 0.5 over one second: ~0.008 per frame, far below the threshold per frame.
+      let t = 0;
+      for (let i = 0; i <= 60; i++, t += 16) m.update(i / 120, 0, t, 16);
+      expect(m.getMode()).toBe('manual');
+    });
+
+    it('counts takeovers in both directions', () => {
+      const m = new SteeringMixer(opts);
+      m.update(0, 0, 0, 16);
+      m.update(0.5, 0, 16, 16);
+      hold(m, 0.5, 0, 32, 8500);
+      m.update(-0.5, 0, 9000, 16);
+      expect(m.getTakeoverCounts()).toEqual({ manual: 2, autopilot: 1 });
+    });
+
+    it('forced autopilot (session ending) ignores the child', () => {
+      const m = new SteeringMixer(opts);
+      m.update(0, 0, 0, 16);
+      m.update(1, 0.2, 16, 16);
+      m.setForcedAutopilot(true);
+      let out = 0;
+      for (let t = 32; t < 2000; t += 16) out = m.update(Math.sin(t) , 0.2, t, 16, true);
+      expect(m.getMode()).toBe('autopilot');
+      expect(out).toBeCloseTo(0.2);
+    });
+
     it('treats a held key as activity even when the value is constant', () => {
       const m = new SteeringMixer(opts);
       let t = 0;

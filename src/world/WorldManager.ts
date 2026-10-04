@@ -3,7 +3,7 @@ import { CONFIG } from '../game/config';
 import { ChunkManager } from './ChunkManager';
 import { buildColoredGeometry, cone, makeCanvas } from './geometry';
 import { ObjectSpawner } from './ObjectSpawner';
-import type { SkyPreset, TerrainPreset, WorldPreset } from './presets/types';
+import type { HillsPreset, SkyPreset, TerrainPreset, WorldPreset } from './presets/types';
 import { createRng } from './random';
 import { RoadGenerator } from './RoadGenerator';
 
@@ -38,7 +38,7 @@ export class WorldManager {
     this.group.add(hemi, this.sun, this.sun.target);
 
     this.sky = createSkyDome(preset.sky);
-    this.hills = createHills(preset.sky);
+    this.hills = createHills(preset.sky.hills);
     this.terrainTexture = createTerrainTexture(preset.terrain);
     const size = CONFIG.world.terrainSize;
     this.terrainTexture.repeat.set(size / this.terrainTile, size / this.terrainTile);
@@ -49,7 +49,7 @@ export class WorldManager {
     this.terrain.rotation.x = -Math.PI / 2;
     this.group.add(this.sky, this.hills, this.terrain);
 
-    this.chunks = new ChunkManager(this.road, preset.road);
+    this.chunks = new ChunkManager(this.road, preset.road, preset.terrain.bands);
     this.props = new ObjectSpawner(this.road, preset.props, this.chunks.poolSize);
     this.chunks.onChunkAssigned((slot, index) => this.props.populate(slot, index));
     this.chunks.reset(0);
@@ -57,9 +57,10 @@ export class WorldManager {
     scene.add(this.group);
   }
 
-  /** Keep the endless world centred around the vehicle. */
-  update(progress: number, focus: THREE.Vector3): void {
+  /** Keep the endless world centred around the vehicle and animate props. */
+  update(progress: number, focus: THREE.Vector3, timeSec: number): void {
     this.chunks.update(progress);
+    this.props.animate(timeSec);
 
     // Terrain follows the vehicle while its texture stays fixed in world space.
     this.terrain.position.set(focus.x, 0, focus.z);
@@ -98,22 +99,36 @@ function createSkyDome(sky: SkyPreset): THREE.Mesh {
   return mesh;
 }
 
-/** A ring of soft green hills on the horizon; follows the vehicle so it never gets closer. */
-function createHills(sky: SkyPreset): THREE.Mesh {
+/** A ring of hills or mountains on the horizon; follows the vehicle so it never gets closer. */
+function createHills(hills: HillsPreset): THREE.Mesh {
   const rng = createRng(42);
   const parts: Parameters<typeof buildColoredGeometry>[0] = [];
   const radius = CONFIG.camera.far * 0.75;
-  for (let i = 0; i < 46; i++) {
-    const angle = (i / 46) * Math.PI * 2 + rng() * 0.08;
+  const count = 46;
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2 + rng() * 0.08;
     const r = radius + rng() * 12;
-    const h = 14 + rng() * 22;
-    const w = 26 + rng() * 26;
+    const h = hills.height[0] + rng() * (hills.height[1] - hills.height[0]);
+    const w = hills.width[0] + rng() * (hills.width[1] - hills.width[0]);
+    const yaw = rng() * Math.PI;
+    const x = Math.cos(angle) * r;
+    const z = Math.sin(angle) * r;
     parts.push({
       geometry: cone(w, h, 7),
-      color: sky.hillColors[i % sky.hillColors.length],
-      position: [Math.cos(angle) * r, h / 2 - 1, Math.sin(angle) * r],
-      rotation: [0, rng() * Math.PI, 0],
+      color: hills.colors[i % hills.colors.length],
+      position: [x, h / 2 - 1, z],
+      rotation: [0, yaw, 0],
     });
+    if (hills.snowCap) {
+      // The top 30% of the same cone, slightly larger so it sits on the slopes.
+      const capH = h * 0.3;
+      parts.push({
+        geometry: cone(w * 0.3 * 1.04, capH, 7),
+        color: hills.snowCap,
+        position: [x, h - 1 - capH / 2 + 0.05, z],
+        rotation: [0, yaw, 0],
+      });
+    }
   }
   const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, fog: false });
   const mesh = new THREE.Mesh(buildColoredGeometry(parts), material);

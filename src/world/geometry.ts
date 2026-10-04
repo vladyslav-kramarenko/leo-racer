@@ -53,6 +53,30 @@ export function buildColoredGeometry(parts: ColoredPart[]): THREE.BufferGeometry
 export const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d);
 export const cyl = (rt: number, rb: number, h: number, seg = 10) => new THREE.CylinderGeometry(rt, rb, h, seg);
 export const cone = (r: number, h: number, seg = 10) => new THREE.ConeGeometry(r, h, seg);
+/** Low-poly blob (detail 0–1) for rocks, bushes and tree crowns. */
+export const ico = (r: number, detail = 0) => new THREE.IcosahedronGeometry(r, detail);
+/**
+ * Triangular prism (gable roof). `width` is the base, `height` the apex height above the base,
+ * `length` runs along Z. The base sits at y = 0.
+ */
+export function prism(width: number, height: number, length: number): THREE.BufferGeometry {
+  const shape = new THREE.Shape();
+  shape.moveTo(-width / 2, 0);
+  shape.lineTo(width / 2, 0);
+  shape.lineTo(0, height);
+  shape.closePath();
+  const g = new THREE.ExtrudeGeometry(shape, { depth: length, bevelEnabled: false });
+  g.translate(0, 0, -length / 2);
+  return g;
+}
+
+/** Merge already-coloured geometries (same attribute layout) into one. */
+export function mergeColored(geometries: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  const merged = mergeGeometries(geometries, false);
+  if (!merged) throw new Error('Failed to merge geometry');
+  merged.computeBoundingSphere();
+  return merged;
+}
 
 /** Canvas helper that never throws when a 2D context is unavailable. */
 export function makeCanvas(width: number, height: number): {

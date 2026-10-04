@@ -1,3 +1,4 @@
+import type { DrawingFrequency } from './DrawingSprite';
 import { CUSTOM_ASSET_VERSION, DrawingStorage, type CustomAsset } from './DrawingStorage';
 
 type Listener = (assets: readonly CustomAsset[], added?: CustomAsset) => void;
@@ -46,6 +47,7 @@ export class DrawingManager {
       version: CUSTOM_ASSET_VERSION,
       confidence: input.confidence,
       source: input.source,
+      frequency: 'normal',
     };
     this.assets = [...this.assets, asset];
     await this.persist(asset);
@@ -57,6 +59,15 @@ export class DrawingManager {
     const asset = this.assets.find((a) => a.id === id);
     if (!asset) return;
     const updated: CustomAsset = { ...asset, manualOverride: moves === asset.canMove ? null : moves };
+    this.assets = this.assets.map((a) => (a.id === id ? updated : a));
+    await this.persist(updated);
+    this.emit();
+  }
+
+  async setFrequency(id: string, frequency: DrawingFrequency): Promise<void> {
+    const asset = this.assets.find((a) => a.id === id);
+    if (!asset) return;
+    const updated: CustomAsset = { ...asset, frequency };
     this.assets = this.assets.map((a) => (a.id === id ? updated : a));
     await this.persist(updated);
     this.emit();
