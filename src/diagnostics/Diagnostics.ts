@@ -22,6 +22,7 @@ export interface LiveDiagnostics {
   activeSprites: number;
   traffic: number;
   drawCalls: number;
+  triangles: number;
   appVersion: string;
 }
 

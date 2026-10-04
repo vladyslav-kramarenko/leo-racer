@@ -276,6 +276,7 @@ export class Game {
       activeSprites: this.sprites.activeCount(),
       traffic: this.traffic.activeCount(),
       drawCalls: this.scenes.drawCalls(),
+      triangles: this.scenes.triangles(),
       appVersion: __APP_VERSION__,
     };
   }

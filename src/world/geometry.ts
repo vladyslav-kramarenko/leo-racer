@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export interface ColoredPart {
@@ -55,6 +57,58 @@ export const cyl = (rt: number, rb: number, h: number, seg = 10) => new THREE.Cy
 export const cone = (r: number, h: number, seg = 10) => new THREE.ConeGeometry(r, h, seg);
 /** Low-poly blob (detail 0–1) for rocks, bushes and tree crowns. */
 export const ico = (r: number, detail = 0) => new THREE.IcosahedronGeometry(r, detail);
+
+/**
+ * Box with softened edges — the "toy" look.
+ * `segments` 1 = a single 45° chamfer (44 triangles — cheap enough for instanced props);
+ * 2–4 = smoothly rounded edges for hero silhouettes (300+ triangles).
+ */
+export function rbox(w: number, h: number, d: number, r = 0.08, segments = 1): THREE.BufferGeometry {
+  if (segments > 1) return new RoundedBoxGeometry(w, h, d, segments, r);
+  return chamferBox(w, h, d, r);
+}
+
+/** Convex hull of the 24 points where a chamfer of size `r` meets the box faces. */
+function chamferBox(w: number, h: number, d: number, r: number): THREE.BufferGeometry {
+  const hx = w / 2;
+  const hy = h / 2;
+  const hz = d / 2;
+  const c = Math.max(0.001, Math.min(r, hx * 0.95, hy * 0.95, hz * 0.95));
+  const points: THREE.Vector3[] = [];
+  for (const sx of [-1, 1]) {
+    for (const sy of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        points.push(
+          new THREE.Vector3(sx * hx, sy * (hy - c), sz * (hz - c)),
+          new THREE.Vector3(sx * (hx - c), sy * hy, sz * (hz - c)),
+          new THREE.Vector3(sx * (hx - c), sy * (hy - c), sz * hz),
+        );
+      }
+    }
+  }
+  return new ConvexGeometry(points);
+}
+
+/** Upper half of a sphere (domes, silo caps, beacon lenses), base at y = 0. */
+export const dome = (r: number, segments = 10) =>
+  new THREE.SphereGeometry(r, segments, Math.max(3, Math.round(segments / 2)), 0, Math.PI * 2, 0, Math.PI / 2);
+
+/**
+ * Extrude a 2D profile (x across, y up) along Z, centred on Z — jersey barriers, boat hulls.
+ * A small bevel softens the edges.
+ */
+export function extrudeProfile(points: [number, number][], length: number, bevel = 0): THREE.BufferGeometry {
+  const shape = new THREE.Shape(points.map(([x, y]) => new THREE.Vector2(x, y)));
+  const g = new THREE.ExtrudeGeometry(shape, {
+    depth: length - bevel * 2,
+    bevelEnabled: bevel > 0,
+    bevelThickness: bevel,
+    bevelSize: bevel,
+    bevelSegments: 1,
+  });
+  g.translate(0, 0, -(length - bevel * 2) / 2);
+  return g;
+}
 /**
  * Triangular prism (gable roof). `width` is the base, `height` the apex height above the base,
  * `length` runs along Z. The base sits at y = 0.

@@ -35,6 +35,7 @@ export class DiagnosticsOverlay {
       `resolution     ${d.resolution}`,
       `pixelRatio     ${d.devicePixelRatio}`,
       `draw calls     ${d.drawCalls}`,
+      `triangles      ${Math.round(d.triangles / 1000)}k`,
       ``,
       `input source   ${d.inputSource}`,
       `gamepad        ${d.gamepadId}`,
