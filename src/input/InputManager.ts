@@ -43,6 +43,10 @@ export class InputManager implements SteeringInput {
   }
 
   onShift(listener: (direction: -1 | 1) => void): void {
+    this.keyboard.onShift((direction) => {
+      this.used.add('keyboard');
+      listener(direction);
+    });
     this.gamepad.onShift((direction) => {
       this.used.add('gamepad');
       listener(direction);

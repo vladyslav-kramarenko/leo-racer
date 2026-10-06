@@ -95,6 +95,8 @@ Open the Parent Menu (hold `Esc` for 2 s) → Diagnostics → Overlay: **Shown**
 
 ## Six horn sounds
 
+Keyboard gears: **Left Shift** shifts down, **Right Shift** shifts up. Each press changes one gear; holding Shift does not repeat. The cartoon gear number appears on each successful shift. Shifting is ignored in the parent menu and during the session ending.
+
 While driving, press keyboard **1–6** (top row or numpad) to test: double beep, truck horn, bicycle bell, happy melody, high-low horn, and cartoon toot. **Space / H** plays the first sound.
 
 On the wheel, the first six buttons not assigned to either gear set play sounds 1–6 in button-number order. Gear buttons remain reserved for shifting. Additional buttons repeat the six sounds. Hold a button to check that it only triggers once; release and press again to replay. Test with sound enabled and the parent menu closed.
