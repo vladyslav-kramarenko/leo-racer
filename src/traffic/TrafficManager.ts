@@ -36,6 +36,7 @@ export class TrafficManager {
   private density: TrafficDensity;
   private nextSpawnIn = 2;
   private passListener: ((kind: TrafficKind) => void) | null = null;
+  private contactListener: (() => void) | null = null;
   /** Overtakers start making room early, from well behind the bus. */
   private readonly overtakeLanes = { ...CONFIG.lanes, lookBehind: 45 };
 
@@ -92,6 +93,10 @@ export class TrafficManager {
     this.passListener = listener;
   }
 
+  onContact(listener: () => void): void {
+    this.contactListener = listener;
+  }
+
   update(dt: number, timeSec: number, bus: BusState): void {
     const density = CONFIG.traffic.density[this.density];
     this.nextSpawnIn -= dt;
@@ -120,7 +125,9 @@ export class TrafficManager {
         this.passListener?.(v.kind);
       }
       const behindLimit = v.overtaking && !v.passed ? -100 : -30;
-      if (ds < behindLimit || ds > 280 || v.age > 120 || overlapsBus(v.s, v.d, bus.s, bus.d, v.halfWidth)) {
+      const bumped = overlapsBus(v.s, v.d, bus.s, bus.d, v.halfWidth);
+      if (bumped) this.contactListener?.();
+      if (ds < behindLimit || ds > 280 || v.age > 120 || bumped) {
         this.release(v);
         continue;
       }
