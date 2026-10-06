@@ -16,6 +16,7 @@ export interface Settings {
 }
 
 const SETTINGS_KEY = 'leo.settings';
+const CALIBRATION_KEY = 'leo.defaultWheelCalibration';
 const INSTALLATION_KEY = 'leo.installationId';
 
 const DEFAULTS: Settings = {
@@ -38,20 +39,43 @@ function storage(): Storage | null {
 }
 
 export function loadSettings(): Settings {
+  const store = storage();
+  let defaultCalibration: WheelCalibration | null = null;
   try {
-    const raw = storage()?.getItem(SETTINGS_KEY);
-    if (!raw) return { ...DEFAULTS };
-    const parsed = JSON.parse(raw) as Partial<Settings>;
-    return { ...DEFAULTS, ...parsed };
+    const raw = store?.getItem(CALIBRATION_KEY);
+    if (raw) defaultCalibration = JSON.parse(raw) as WheelCalibration;
   } catch {
-    return { ...DEFAULTS };
+    // Ignore an unavailable or corrupt backup.
+  }
+  try {
+    const raw = store?.getItem(SETTINGS_KEY);
+    if (!raw) return { ...DEFAULTS, calibration: defaultCalibration };
+    const parsed = JSON.parse(raw) as Partial<Settings>;
+    return { ...DEFAULTS, ...parsed, calibration: mergeCalibration(parsed.calibration ?? defaultCalibration, defaultCalibration) };
+  } catch {
+    return { ...DEFAULTS, calibration: defaultCalibration };
   }
 }
 
+/** Steering recalibration must keep pedal defaults for the same wheel. */
+function mergeCalibration(cal: WheelCalibration | null, previous: WheelCalibration | null): WheelCalibration | null {
+  if (!cal || cal.gamepadId !== previous?.gamepadId) return cal;
+  return { ...previous, ...cal };
+}
+
 export function saveSettings(patch: Partial<Settings>): Settings {
-  const next = { ...loadSettings(), ...patch };
+  const previous = loadSettings();
+  const next = { ...previous, ...patch };
+  if (patch.calibration !== undefined) next.calibration = mergeCalibration(patch.calibration, previous.calibration);
+  const store = storage();
   try {
-    storage()?.setItem(SETTINGS_KEY, JSON.stringify(next));
+    if (next.calibration) store?.setItem(CALIBRATION_KEY, JSON.stringify(next.calibration));
+    else if (patch.calibration === null) store?.removeItem(CALIBRATION_KEY);
+  } catch {
+    // Storage may be blocked; keep using the current in-memory calibration.
+  }
+  try {
+    store?.setItem(SETTINGS_KEY, JSON.stringify(next));
   } catch {
     // Storage full or blocked: settings simply won't persist.
   }
