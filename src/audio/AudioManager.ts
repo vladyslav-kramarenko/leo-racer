@@ -16,6 +16,10 @@ export class AudioManager {
   private master: GainNode | null = null;
   private engineOsc: OscillatorNode[] = [];
   private engineGain: GainNode | null = null;
+  private engineRevGain: GainNode | null = null;
+  private engineFilter: BiquadFilterNode | null = null;
+  private accelerationOsc: OscillatorNode | null = null;
+  private accelerationGain: GainNode | null = null;
   private ambientGain: GainNode | null = null;
   private enabled = true;
   private ducked = false;
@@ -51,13 +55,17 @@ export class AudioManager {
     // Engine: soft and low — present, but not a drone. Oscillators → low-pass → gentle
     // "chug" (pulse, multiplied) → level (so a parked bus is truly silent).
     const filter = ctx.createBiquadFilter();
+    this.engineFilter = filter;
     filter.type = 'lowpass';
     filter.frequency.value = 300;
     const pulse = ctx.createGain();
     pulse.gain.value = 1;
     this.engineGain = ctx.createGain();
     this.engineGain.gain.value = ENGINE_GAIN;
-    filter.connect(pulse).connect(this.engineGain).connect(this.master);
+    // A separate rev level keeps accelerator feedback independent of the session fade.
+    this.engineRevGain = ctx.createGain();
+    this.engineRevGain.gain.value = 1;
+    filter.connect(pulse).connect(this.engineRevGain).connect(this.engineGain).connect(this.master);
     for (const [type, mult, gain] of [
       ['sawtooth', 1, 0.5],
       ['square', 2.01, 0.07],
@@ -77,6 +85,19 @@ export class AudioManager {
     lfoGain.gain.value = 0.12;
     lfo.connect(lfoGain).connect(pulse.gain);
     lfo.start();
+
+    // A distinct midrange motor voice makes pressing the accelerator clearly audible.
+    // It shares the engine's final level so session fade and parking silence still apply.
+    this.accelerationOsc = ctx.createOscillator();
+    this.accelerationOsc.type = 'triangle';
+    this.accelerationOsc.frequency.value = 85;
+    const revFilter = ctx.createBiquadFilter();
+    revFilter.type = 'lowpass';
+    revFilter.frequency.value = 1100;
+    this.accelerationGain = ctx.createGain();
+    this.accelerationGain.gain.value = 0;
+    this.accelerationOsc.connect(revFilter).connect(this.accelerationGain).connect(this.engineGain);
+    this.accelerationOsc.start();
 
     // Ambience: noise bed (optionally swelling like waves) + preset events.
     const amb = preset.ambience;
@@ -124,14 +145,24 @@ export class AudioManager {
     this.applyVolume();
   }
 
-  /** @param speedRatio 0 = stopped (idle), 1 = cruising. */
-  update(dt: number, steering: number, speedRatio: number, running: boolean): void {
+  /** Accelerator feedback starts on press, before the vehicle has gained speed. */
+  update(dt: number, steering: number, speedRatio: number, running: boolean, speedMultiplier = 1, rpmMultiplier = 1): void {
     const ctx = this.ctx;
     if (!ctx || !running) return;
-    const pitch = (0.72 + 0.28 * speedRatio) * (1 + Math.abs(steering) * 0.06);
+    const boost = Number.isFinite(speedMultiplier) ? Math.max(0, Math.min(1, (speedMultiplier - 1) / 2)) : 0;
+    // Even a light pedal press is audible; full pedal or ↑/W gives the strongest rev.
+    const rev = boost > 0 ? 0.55 + 0.45 * boost : 0;
+    const response = rev > 0 ? 0.07 : 0.3;
+    const speed = Number.isFinite(speedRatio) ? Math.max(0, Math.min(5, speedRatio)) : 1;
+    const rpm = Number.isFinite(rpmMultiplier) ? Math.max(0.5, Math.min(2, rpmMultiplier)) : 1;
+    const pitch = (0.72 + 0.28 * speed) * (1 + Math.abs(steering) * 0.06) * (1 + rev) * rpm;
     this.engineOsc.forEach((osc, i) => {
-      osc.frequency.setTargetAtTime(this.baseHz * (i === 0 ? 1 : 2.01) * pitch, ctx.currentTime, 0.2);
+      osc.frequency.setTargetAtTime(this.baseHz * (i === 0 ? 1 : 2.01) * pitch, ctx.currentTime, response);
     });
+    this.engineRevGain?.gain.setTargetAtTime(1 + rev * 2, ctx.currentTime, response);
+    this.engineFilter?.frequency.setTargetAtTime(300 + rev * 1000, ctx.currentTime, response);
+    this.accelerationOsc?.frequency.setTargetAtTime((85 + rev * 155 + speed * 20) * rpm, ctx.currentTime, 0.18);
+    this.accelerationGain?.gain.setTargetAtTime(rev * 1.3, ctx.currentTime, response);
 
     if (this.events.length) {
       this.nextEvent -= dt;
