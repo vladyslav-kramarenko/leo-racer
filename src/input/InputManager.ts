@@ -1,7 +1,7 @@
 import { CONFIG } from '../game/config';
 import { GamepadInput } from './GamepadInput';
 import { KeyboardInput } from './KeyboardInput';
-import type { InputSource, SteeringInput, WheelCalibration } from './SteeringState';
+import { pedalSpeedMultiplier, type InputSource, type SteeringInput, type WheelCalibration } from './SteeringState';
 import { TiltInput } from './TiltInput';
 import { TouchBrake } from './TouchBrake';
 
@@ -24,6 +24,7 @@ export class InputManager implements SteeringInput {
 
   attach(canvas?: HTMLElement): void {
     this.detachers.push(this.keyboard.attach(window));
+    this.detachers.push(this.gamepad.haptics.attach());
     if (canvas) this.detachers.push(this.touchBrake.attach(canvas));
   }
 
@@ -41,6 +42,13 @@ export class InputManager implements SteeringInput {
     this.gamepad.onHorn(listener);
   }
 
+  onShift(listener: (direction: -1 | 1) => void): void {
+    this.gamepad.onShift((direction) => {
+      this.used.add('gamepad');
+      listener(direction);
+    });
+  }
+
   update(dtMs: number): void {
     this.keyboard.update(dtMs);
     this.gamepad.update();
@@ -56,8 +64,9 @@ export class InputManager implements SteeringInput {
     if (tiltMoved) this.tiltAnchor = tilt;
 
     // Braking never steals steering, but it is still recorded as device use.
-    if (this.keyboard.isBraking()) this.used.add('keyboard');
+    if (this.keyboard.isBraking() || this.keyboard.isAccelerating()) this.used.add('keyboard');
     if (this.touchBrake.isBraking()) this.used.add('touch');
+    if (this.gamepad.isBraking() || this.gamepad.isAccelerating()) this.used.add('gamepad');
 
     // Whichever device was touched most recently owns steering.
     if (this.keyboard.consumeKeyEvent() || this.keyboard.isHeld()) this.setSource('keyboard');
@@ -66,9 +75,17 @@ export class InputManager implements SteeringInput {
     else if (this.source === 'none' && this.gamepad.getConnected()) this.source = 'gamepad';
   }
 
-  /** True while the child holds a brake (key or touch zone). */
+  /** True while the child holds a brake (key, pedal or touch zone). */
   isBraking(): boolean {
-    return this.keyboard.isBraking() || this.touchBrake.isBraking();
+    return this.keyboard.isBraking() || this.touchBrake.isBraking() || this.gamepad.isBraking();
+  }
+
+  isAccelerating(): boolean {
+    return this.keyboard.isAccelerating() || this.gamepad.isAccelerating();
+  }
+
+  getSpeedMultiplier(): number {
+    return this.keyboard.isAccelerating() ? 3 : pedalSpeedMultiplier(this.gamepad.getThrottle());
   }
 
   getSteering(): number {
