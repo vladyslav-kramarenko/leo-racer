@@ -8,8 +8,13 @@ export interface LiveDiagnostics {
   devicePixelRatio: number;
   inputSource: InputSource;
   gamepadId: string;
+  haptics: string;
+  gear: string;
   steeringAxis: string;
   rawSteering: number;
+  gamepadAxes: string;
+  pedalBrake: string;
+  pedalThrottle: string;
   normalizedSteering: number;
   tilt: string;
   speedKmh: number;
