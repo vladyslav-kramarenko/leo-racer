@@ -2,6 +2,7 @@ import { CONFIG } from '../game/config';
 import { PLAY_TIME_OPTIONS, playTimeLabel, type SessionPhase } from '../session/SessionState';
 import { TRAFFIC_DENSITIES, type TrafficDensity } from '../traffic/TrafficManager';
 import { clear, h } from './dom';
+import { createWorldPicker } from './WorldPicker';
 
 export type TiltStatus = 'on' | 'off' | 'unavailable';
 
@@ -158,23 +159,7 @@ export class ParentMenu {
     renderTilt(host.tiltStatus());
     tiltButton.addEventListener('click', async () => renderTilt(await host.setTiltEnabled(host.tiltStatus() !== 'on')));
 
-    // Picture cards: easier for a parent to recognise than a list of names.
-    const worlds = host.worlds().map((w) => {
-      const current = w.id === host.currentWorld();
-      const card = h(
-        'button',
-        {
-          type: 'button',
-          class: `world-card${current ? ' current' : ''}`,
-          'aria-pressed': String(current),
-          'data-testid': `world-${w.id}`,
-        },
-        w.thumbnail ? h('img', { src: w.thumbnail, alt: '', loading: 'lazy' }) : h('div', { class: 'world-card-blank' }),
-        h('span', {}, w.name),
-      );
-      if (!current) card.addEventListener('click', () => host.selectWorld(w.id));
-      return card;
-    });
+    const worlds = createWorldPicker(host.worlds(), host.currentWorld(), (id) => host.selectWorld(id));
 
     const copyStatus = h('span', { class: 'hint' });
 
@@ -226,7 +211,7 @@ export class ParentMenu {
         'section',
         {},
         h('h3', {}, 'World'),
-        h('div', { class: 'world-grid' }, ...worlds),
+        worlds,
         h('p', { class: 'hint' }, 'Tap a world to switch. The game restarts with the START button.'),
       ),
       h(
