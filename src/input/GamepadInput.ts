@@ -89,13 +89,13 @@ export class GamepadInput implements SteeringInput {
     const throttleRaw = cal?.throttle ? pad.axes[cal.throttle.axis] : undefined;
     this.throttle = cal?.throttle && throttleRaw !== undefined ? normalizePedal(throttleRaw, cal.throttle) : 0;
 
-    const up = cal?.gearButtons?.up ?? 5;
-    const down = cal?.gearButtons?.down ?? 4;
-    const upPressed = !!pad.buttons[up] && !this.prevButtons[up];
-    const downPressed = !!pad.buttons[down] && !this.prevButtons[down];
-    if (up !== down && upPressed !== downPressed) this.shiftListener?.(upPressed ? 1 : -1);
+    const sets = [cal?.gearButtons ?? { up: 5, down: 4 }, ...(cal?.secondaryGearButtons ? [cal.secondaryGearButtons] : [])];
+    const rising = (button: number) => !!pad.buttons[button] && !this.prevButtons[button];
+    const upPressed = sets.some((set) => rising(set.up));
+    const downPressed = sets.some((set) => rising(set.down));
+    if (upPressed !== downPressed) this.shiftListener?.(upPressed ? 1 : -1);
     // Shift buttons are reserved; other buttons still honk on the rising edge.
-    const pressedNow = pad.buttons.some((b, i) => i !== up && i !== down && b && !this.prevButtons[i]);
+    const pressedNow = pad.buttons.some((b, i) => !sets.some((set) => i === set.up || i === set.down) && b && !this.prevButtons[i]);
     if (pressedNow) this.hornListener?.();
     this.prevButtons = pad.buttons.slice();
   }
