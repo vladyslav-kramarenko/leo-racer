@@ -19,6 +19,8 @@ import { chalet, fox, hare, iceRink, skiSlope, sledHill, snowbank, snowFort, sno
  */
 
 export type PartAnim =
+  /** Fixed geometry, for luminous windows and lamps. */
+  | { type: 'steady' }
   /** Continuous rotation (rad/s). */
   | { type: 'spin'; axis: 'x' | 'y' | 'z'; speed: number }
   /** angle = bias + amplitude·sin(speed·t). */

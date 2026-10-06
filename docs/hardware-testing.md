@@ -101,6 +101,10 @@ While driving, press keyboard **1–6** (top row or numpad) to test: double beep
 
 On the wheel, the first six buttons not assigned to either gear set play sounds 1–6 in button-number order. Gear buttons remain reserved for shifting. Additional buttons repeat the six sounds. Hold a button to check that it only triggers once; release and press again to replay. Test with sound enabled and the parent menu closed.
 
+## Night City
+
+Select City in either world picker. Check the blue night sky, full moon and stars, dark False Creek water and mountain silhouettes, warm/cool tower windows, shop-front lights and illuminated Science World, Harbour Centre and steam-clock faces. Lamp pools and the bus headlights should make the road and markings easy to read; there should be no strobing. SkyTrain windows must follow their cars and disappear with them. Drive through multiple recycled chunks: light pools must remain aligned under the street lamps and no lights should accumulate. Pause/resume, then switch to Farm and back through the Parent Menu; the world change should resume driving immediately, and Farm should keep its daytime lighting. Reload must retain City and the night thumbnail. Check desktop and phone views with normal traffic.
+
 ## Sea to Sky steam freight
 
 Sea to Sky has a ground-level railway on the forest side. A steam locomotive, coal tender, five loaded ore wagons and red caboose pass in alternating directions. Check the first approaching train soon after entering Sea to Sky, then a following train after another 14–24 seconds between trains. Wheels, connecting rods and chimney steam should animate; opening the parent menu pauses them. Track and cars should follow the road curves and remain clear of rocks, trees and the driving corridor.

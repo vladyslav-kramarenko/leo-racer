@@ -11,7 +11,7 @@ const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
  * overtakes the bus or comes the other way. Data-driven from the world preset.
  *
  * - The beam is one mesh: each road-chunk slot owns a vertex range rewritten on recycle.
- * - Columns are one InstancedMesh; the train cars are another. Three draw calls in total.
+ * - Columns and train cars are instanced; night windows add one optional draw call.
  */
 export class Guideway {
   readonly group = new THREE.Group();
@@ -20,6 +20,7 @@ export class Guideway {
   private readonly beam: THREE.Mesh;
   private readonly columns: THREE.InstancedMesh;
   private readonly train: THREE.InstancedMesh;
+  private readonly trainWindows: THREE.InstancedMesh | null;
   private readonly segs = CONFIG.world.segmentsPerChunk;
   private readonly length = CONFIG.world.chunkLength;
   private readonly columnsPerChunk: number;
@@ -85,6 +86,13 @@ export class Guideway {
       cfg.train.cars,
     );
     this.train.frustumCulled = false;
+    this.trainWindows = cfg.train.windowGlow ? new THREE.InstancedMesh(
+      trainWindowGeometry(cfg.train.carLength), new THREE.MeshBasicMaterial({ color: '#ffe4a3' }), cfg.train.cars,
+    ) : null;
+    if (this.trainWindows) {
+      this.trainWindows.frustumCulled = false;
+      this.group.add(this.trainWindows);
+    }
     this.hideTrain();
 
     this.group.add(this.beam, this.columns, this.train);
@@ -170,14 +178,31 @@ export class Guideway {
       this.v.set(this.p.x, this.cfg.height + this.cfg.thickness, this.p.z);
       this.m.compose(this.v, this.q, this.one);
       this.train.setMatrixAt(i, this.m);
+      this.trainWindows?.setMatrixAt(i, this.m);
     }
     this.train.instanceMatrix.needsUpdate = true;
+    if (this.trainWindows) this.trainWindows.instanceMatrix.needsUpdate = true;
   }
 
   private hideTrain(): void {
-    for (let i = 0; i < this.train.count; i++) this.train.setMatrixAt(i, ZERO);
+    for (let i = 0; i < this.train.count; i++) {
+      this.train.setMatrixAt(i, ZERO);
+      this.trainWindows?.setMatrixAt(i, ZERO);
+    }
     this.train.instanceMatrix.needsUpdate = true;
+    if (this.trainWindows) this.trainWindows.instanceMatrix.needsUpdate = true;
   }
+}
+
+function trainWindowGeometry(length: number): THREE.BufferGeometry {
+  const parts: Parameters<typeof buildColoredGeometry>[0] = [];
+  for (const x of [-1.29, 1.29]) for (const z of [-length / 2 + 1, -0.65, 0.65, length / 2 - 1]) {
+    parts.push({ geometry: rbox(0.04, 0.62, 0.85, 0.025), color: '#ffffff', position: [x, 2.05, z] });
+  }
+  for (const z of [-length / 2 - 0.07, length / 2 + 0.07]) {
+    parts.push({ geometry: rbox(1.8, 0.7, 0.03, 0.015), color: '#ffffff', position: [0, 2, z] });
+  }
+  return buildColoredGeometry(parts);
 }
 
 /** One rounded train car facing -Z, sitting on y = 0 (the top of the beam). */

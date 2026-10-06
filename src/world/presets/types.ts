@@ -131,6 +131,14 @@ export interface SkyPreset {
   hemiIntensity: number;
   hills: HillsPreset;
   skyline?: SkylinePreset;
+  night?: NightPreset;
+}
+
+export interface NightPreset {
+  stars: number;
+  moonColor: string;
+  lampColor: string;
+  windowColors: string[];
 }
 
 /** A coloured strip that follows the road (water, fields, sidewalk…). Offsets from the road centre. */
@@ -234,6 +242,7 @@ export interface GuidewayPreset {
     speed: number;
     intervalSec: [number, number];
     colors: { body: string; stripe: string; window: string };
+    windowGlow?: boolean;
   };
 }
 

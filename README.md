@@ -19,7 +19,7 @@ Leo Racer is a browser driving toy for children aged 2–4.
 | --- | --- |
 | ![Construction world](docs/images/construction.jpg) | ![Sea to Sky world](docs/images/nature.jpg) |
 | **Farm** | **City** |
-| ![Autumn Farm world](public/worlds/farm.jpg) | ![City world](docs/images/city.jpg) |
+| ![Autumn Farm world](public/worlds/farm.jpg) | ![Night City world](public/worlds/city.jpg) |
 
 **Nature — a Banff-inspired forest with wildlife overpasses.**
 
@@ -42,7 +42,7 @@ Leo Racer is a browser driving toy for children aged 2–4.
   Farm is an autumn harvest world: pumpkin patches with bunting and scarecrows, roadside produce stands, golden corn, fallen leaves and orange/red trees alongside barns, hay bales, cows and sheep.
   A yellow utility biplane with a spinning propeller occasionally flies across the Farm road above the fields.
   A harvest tractor pulls three open wagons of visitors around a dirt oval beside the road, with hay bales, pumpkins and autumn bunting.
-  City is Vancouver-inspired: glass towers, the seawall, SkyTrain overhead, cherry blossoms and simplified landmarks.
+  City is Vancouver-inspired at night: a moon and stars over the seawall, glowing tower windows, neon shop fronts, warm street lamps, bus headlights and illuminated SkyTrain windows. Cherry blossoms and simplified landmarks retain their toy silhouettes.
 - **Many inputs:**
   - Keyboard steering, brake and horn.
   - Any gamepad or steering wheel via the Gamepad API, with a calibration wizard.

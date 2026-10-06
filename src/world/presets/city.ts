@@ -5,31 +5,34 @@ import type { WorldPreset } from './types';
  * a seawall along False Creek on the left, snowy North Shore mountains, cherry blossoms,
  * a SkyTrain-style elevated line with trains, and now and then a landmark — a geodesic
  * science dome, a pier with white sails, a lookout tower and a little steam clock.
+ * Night palette, window lights and pooled street lighting keep the road readable.
  */
 export const city: WorldPreset = {
   id: 'city',
   name: 'City',
   thumbnail: '/worlds/city.jpg',
   sky: {
-    top: '#6aaee8',
-    horizon: '#e4eef6',
-    fogColor: '#dde7ef',
-    fogNear: 60,
-    fogFar: 225,
-    sunColor: '#fff3e0',
-    sunIntensity: 2.1,
-    hemiSky: '#d8e8f6',
-    hemiGround: '#8c9a8c',
-    hemiIntensity: 1.35,
+    top: '#090f2c',
+    horizon: '#263958',
+    fogColor: '#22324d',
+    fogNear: 70,
+    fogFar: 235,
+    sunColor: '#a4bdff',
+    sunIntensity: 0.55,
+    hemiSky: '#7c94cb',
+    hemiGround: '#444665',
+    hemiIntensity: 0.8,
+    night: { stars: 180, moonColor: '#fff0c6', lampColor: '#ffd38a',
+      windowColors: ['#ffd486', '#ffe8b4', '#8ed7ed'] },
     hills: {
-      colors: ['#5f7d8f', '#6c8a9b', '#55717f', '#7896a6'],
-      height: [42, 74],
+      colors: ['#253651', '#2c405a', '#203149', '#354a64'],
+      height: [28, 52],
       width: [42, 72],
-      snowCap: '#f4f8fb',
+      snowCap: '#8096b8',
     },
     // Downtown skyline on the right; across False Creek (left) you see the mountains.
     skyline: {
-      colors: ['#b9cfdf', '#c9d9e6', '#aac3d6', '#d3e0ea', '#b3cbd9'],
+      colors: ['#273952', '#314360', '#23344c', '#3b4b68', '#2d3e59'],
       height: [24, 62],
       width: [8, 15],
       count: 64,
@@ -37,16 +40,16 @@ export const city: WorldPreset = {
     },
   },
   terrain: {
-    base: '#9cc46e',
-    speckles: ['#90b862', '#a8cd7a', '#86ad5a'],
-    patches: ['#b0d483', '#8ab05e', '#c2dc96'],
+    base: '#415a53',
+    speckles: ['#3b514e', '#4c635a', '#354a48'],
+    patches: ['#53695c', '#3c514e', '#5e7162'],
     bands: [
       // Sidewalks on both sides.
-      { side: 'both', from: 6.5, to: 10.5, color: '#cfd1d4', y: 0.05 },
+      { side: 'both', from: 6.5, to: 10.5, color: '#7d899b', y: 0.05 },
       // Seawall promenade and False Creek on the left.
-      { side: 'left', from: 10.5, to: 14, color: '#ddd6c8', y: 0.05 },
-      { side: 'left', from: 14, to: 330, color: '#3f86b8', y: 0.04 },
-      { side: 'left', from: 14, to: 14.6, color: '#7a7f86', y: 0.09 },
+      { side: 'left', from: 10.5, to: 14, color: '#8993a3', y: 0.05 },
+      { side: 'left', from: 14, to: 330, color: '#183956', y: 0.04 },
+      { side: 'left', from: 14, to: 14.6, color: '#52657a', y: 0.09 },
     ],
   },
   road: {
@@ -62,7 +65,7 @@ export const city: WorldPreset = {
   },
   props: {
     perChunk: [4, 7],
-    shoulderCones: 2,
+    shoulderCones: 3,
     shoulderProp: 'streetLamp',
     shoulderDistance: 0.6,
     items: [
@@ -99,7 +102,8 @@ export const city: WorldPreset = {
       carLength: 8.4,
       speed: 13,
       intervalSec: [12, 22],
-      colors: { body: '#f2f4f6', stripe: '#1f6fd0', window: '#2b3a4a' },
+      colors: { body: '#f2f4f6', stripe: '#1f6fd0', window: '#4c6275' },
+      windowGlow: true,
     },
   },
   audio: {

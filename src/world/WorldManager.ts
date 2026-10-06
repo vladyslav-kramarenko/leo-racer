@@ -6,6 +6,7 @@ import { FreightRailway } from './FreightRailway';
 import { Snowfall } from './Snowfall';
 import { SantaSleigh } from './SantaSleigh';
 import { CropDuster } from './CropDuster';
+import { NightLighting } from './NightLighting';
 import { applyGroundCutouts } from './groundCutouts';
 import { box, buildColoredGeometry, cone, makeCanvas, rbox } from './geometry';
 import { ObjectSpawner } from './ObjectSpawner';
@@ -26,7 +27,8 @@ export class WorldManager {
   private readonly terrainTexture: THREE.Texture;
   private readonly sky: THREE.Mesh;
   private readonly hills: THREE.Mesh;
-  private readonly skyline: THREE.Mesh | null;
+  private readonly skyline: THREE.Group | null;
+  readonly nightLighting: NightLighting | null;
   readonly guideway: Guideway | null;
   readonly freightRailway: FreightRailway | null;
   readonly snowfall: Snowfall | null;
@@ -51,7 +53,7 @@ export class WorldManager {
 
     this.sky = createSkyDome(preset.sky);
     this.hills = createHills(preset.sky.hills);
-    this.skyline = preset.sky.skyline ? createSkyline(preset.sky.skyline) : null;
+    this.skyline = preset.sky.skyline ? createSkyline(preset.sky.skyline, preset.sky.night?.windowColors) : null;
     if (this.skyline) this.group.add(this.skyline);
     this.terrainTexture = createTerrainTexture(preset.terrain);
     const size = CONFIG.world.terrainSize;
@@ -64,9 +66,15 @@ export class WorldManager {
     this.group.add(this.sky, this.hills, this.terrain);
 
     this.chunks = new ChunkManager(this.road, preset.road, preset.terrain.bands);
-    this.props = new ObjectSpawner(this.road, preset.props, this.chunks.poolSize);
+    this.props = new ObjectSpawner(this.road, preset.props, this.chunks.poolSize, preset.sky.night);
     applyGroundCutouts(this.terrain.material as THREE.MeshLambertMaterial, this.props.groundCutouts, this.props.groundCutoutRotations);
     this.chunks.onChunkAssigned((slot, index) => this.props.populate(slot, index));
+    this.nightLighting = preset.sky.night ? new NightLighting(this.road, preset.props, preset.sky.night, this.chunks.poolSize) : null;
+    if (this.nightLighting) {
+      const night = this.nightLighting;
+      this.chunks.onChunkAssigned((slot, index) => night.assign(slot, index));
+      this.group.add(night.group);
+    }
     this.guideway = preset.guideway ? new Guideway(this.road, preset.guideway, this.chunks.poolSize) : null;
     if (this.guideway) {
       const guideway = this.guideway;
@@ -99,6 +107,7 @@ export class WorldManager {
     this.snowfall?.update(dt, focus);
     this.santaSleigh?.update(dt, progress);
     this.cropDuster?.update(dt, progress);
+    this.nightLighting?.update(progress, focus);
 
     // Terrain follows the vehicle while its texture stays fixed in world space.
     this.terrain.position.set(focus.x, 0, focus.z);
@@ -142,9 +151,10 @@ function createSkyDome(sky: SkyPreset): THREE.Mesh {
  * Distant tower silhouettes in hazy colours (no fog, like the hills). Leaves a gap straight
  * ahead and behind, where the road runs, so no tower stands on the road.
  */
-function createSkyline(skyline: SkylinePreset): THREE.Mesh {
+function createSkyline(skyline: SkylinePreset, windowColors?: string[]): THREE.Group {
   const rng = createRng(17);
   const parts: Parameters<typeof buildColoredGeometry>[0] = [];
+  const windows: Parameters<typeof buildColoredGeometry>[0] = [];
   const radius = CONFIG.camera.far * 0.64;
   for (let i = 0; i < skyline.count; i++) {
     const angle = (i / skyline.count) * Math.PI * 2 + rng() * 0.05;
@@ -161,6 +171,17 @@ function createSkyline(skyline: SkylinePreset): THREE.Mesh {
     const x = Math.cos(angle) * r;
     const z = Math.sin(angle) * r;
     parts.push({ geometry: rbox(w, h, w * 0.8, 0.6), color, position: [x, h / 2 - 1, z], rotation: [0, -angle, 0] });
+    if (windowColors) for (let row = 0; row < Math.floor(h / 4); row++) for (let col = 0; col < 3; col++) {
+      if ((i + row * 3 + col) % 4 === 0) continue;
+      for (let face = 0; face < 4; face++) {
+        const theta = -angle + face * Math.PI / 2;
+        const lateral = (col - 1) * w * 0.24;
+        const depth = face % 2 ? w / 2 + 0.03 : w * 0.4 + 0.03;
+        windows.push({ geometry: box(w * 0.12, 0.7, 0.06), color: windowColors[(i + col + row) % windowColors.length],
+          position: [x + Math.cos(theta) * lateral + Math.sin(theta) * depth, 2 + row * 4,
+            z - Math.sin(theta) * lateral + Math.cos(theta) * depth], rotation: [0, theta, 0] });
+      }
+    }
     if (rng() < 0.35) {
       parts.push({ geometry: box(w * 0.5, 3, w * 0.4), color, position: [x, h + 0.5, z], rotation: [0, -angle, 0] });
     }
@@ -168,7 +189,10 @@ function createSkyline(skyline: SkylinePreset): THREE.Mesh {
   const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, fog: false });
   const mesh = new THREE.Mesh(buildColoredGeometry(parts), material);
   mesh.frustumCulled = false;
-  return mesh;
+  const group = new THREE.Group();
+  group.add(mesh);
+  if (windows.length) group.add(new THREE.Mesh(buildColoredGeometry(windows), new THREE.MeshBasicMaterial({ vertexColors: true, fog: false })));
+  return group;
 }
 
 /** A ring of hills or mountains on the horizon; follows the vehicle so it never gets closer. */

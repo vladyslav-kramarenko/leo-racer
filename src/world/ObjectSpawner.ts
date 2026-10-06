@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { CONFIG } from '../game/config';
 import { circuitPose, type CircuitPose } from './circuitPath';
 import { buildPropModel, type PartAnim, type PropModel } from './props';
-import type { PropKind, PropSpec, PropsPreset } from './presets/types';
+import { nightPropGeometry } from './nightProps';
+import type { NightPreset, PropKind, PropSpec, PropsPreset } from './presets/types';
 import { createRng, hashInt, randRange } from './random';
 import type { RoadGenerator } from './RoadGenerator';
 
@@ -59,6 +60,7 @@ export class ObjectSpawner {
     private readonly road: RoadGenerator,
     private readonly preset: PropsPreset,
     slots: number,
+    night?: NightPreset,
   ) {
     this.shoulderProp = preset.shoulderProp ?? 'cone';
     const kinds = new Map<PropKind, number>();
@@ -69,6 +71,8 @@ export class ObjectSpawner {
 
     for (const [kind, perSlot] of kinds) {
       const model = buildPropModel(kind);
+      const glow = night ? nightPropGeometry(kind, night) : null;
+      if (glow) (model.parts ??= []).push({ geometry: glow, pivot: [0, 0, 0], anim: { type: 'steady' }, unlit: true });
       const capacity = perSlot * slots;
       const cutout = model.groundCutout ? { offset: this.groundCutouts.length, footprint: model.groundCutout } : undefined;
       const exclusion = model.placementExclusion ? { offset: this.exclusionAreas.length, size: model.placementExclusion } : undefined;

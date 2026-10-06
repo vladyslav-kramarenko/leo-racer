@@ -64,6 +64,11 @@ export function validatePreset(preset: WorldPreset): string[] {
     if (rail.intervalSec[0] <= 0 || rail.intervalSec[1] < rail.intervalSec[0]) errors.push('freightRailway.intervalSec must be a positive [min, max]');
   }
   if (!preset.traffic) errors.push('traffic is required');
+  if (preset.sky?.night) {
+    const night = preset.sky.night;
+    if (!Number.isInteger(night.stars) || night.stars < 0 || night.stars > 1000) errors.push('sky.night.stars must be 0–1000');
+    if (!night.windowColors.length || !night.lampColor || !night.moonColor) errors.push('sky.night needs window, lamp and moon colours');
+  }
   if (preset.santaSleigh) {
     const { altitude, intervalSec: [low, high] } = preset.santaSleigh;
     if (!Number.isFinite(altitude) || altitude < 34) errors.push('santaSleigh.altitude must clear the ski village (>= 34 m)');
