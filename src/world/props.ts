@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { box, buildColoredGeometry, cone, cyl, dome, extrudeProfile, ico, prism, rbox, type ColoredPart } from './geometry';
 import type { PropKind } from './presets/types';
 import { carParts, dumpTruckParts, tractorParts, TOY } from './toyParts';
+import { quarry } from './quarry';
 
 /**
  * Low-poly, toy-like prop library. All models are original, built from primitives:
@@ -963,6 +964,7 @@ const BUILDERS: Record<PropKind, () => PropModel> = {
   gravel,
   excavator,
   dumpTruck,
+  quarry,
   crane,
   unfinishedBuilding,
   pine,

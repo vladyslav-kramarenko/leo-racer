@@ -37,6 +37,8 @@ export const construction: WorldPreset = {
     perChunk: [3, 6],
     shoulderCones: 4,
     items: [
+      { kind: 'quarry', weight: 1, minDistance: 13, maxDistance: 13, scale: [1, 1], maxPerChunk: 1,
+        facing: 'road', side: 'right', every: { chunks: 8, offset: 1 } },
       { kind: 'barrier', weight: 3, minDistance: 1.2, maxDistance: 3, scale: [1, 1], maxPerChunk: 3, facing: 'road' },
       { kind: 'concreteBlock', weight: 2, minDistance: 2, maxDistance: 10, scale: [0.9, 1.2], maxPerChunk: 3 },
       { kind: 'pipes', weight: 2, minDistance: 4, maxDistance: 14, scale: [0.9, 1.2], maxPerChunk: 2 },

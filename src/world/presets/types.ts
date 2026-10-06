@@ -12,6 +12,7 @@ export type PropKind =
   | 'sign'
   | 'excavator'
   | 'dumpTruck'
+  | 'quarry'
   | 'crane'
   | 'gravel'
   | 'unfinishedBuilding'
