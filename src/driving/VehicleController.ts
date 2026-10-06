@@ -1,5 +1,6 @@
 import { CONFIG } from '../game/config';
 import { approach, clamp } from '../input/SteeringState';
+import { Gearbox } from './Gearbox';
 
 type DrivingConfig = typeof CONFIG.driving;
 
@@ -19,12 +20,13 @@ export interface VehicleState {
 
 /**
  * Deliberately simple kinematic model — no physics engine.
- * The vehicle cruises forward at a constant speed; steering only changes lateral offset,
+ * The vehicle cruises forward, with up to triple speed while accelerating; steering changes lateral offset,
  * which is confined by a soft boundary (gentle push-back) and a hard boundary (clamp).
  * Holding the brake eases the vehicle to a stop; releasing it always drives on again.
  * Nothing the child does can crash, flip or strand the vehicle.
  */
 export class VehicleController {
+  readonly gearbox = new Gearbox();
   readonly state: VehicleState;
   /** Runtime multiplier on cruise speed (session ending slows to 0). Never mutates config. */
   private cruiseScale = 1;
@@ -45,20 +47,25 @@ export class VehicleController {
     this.cruiseScale = clamp(Number.isFinite(scale) ? scale : 1, 0, 1);
   }
 
-  update(dtSec: number, steering: number, braking = false): VehicleState {
+  getCruisingSpeed(): number {
+    return this.cfg.speed * this.gearbox.getRatios().speed;
+  }
+
+  update(dtSec: number, steering: number, braking = false, speedMultiplier = 1): VehicleState {
     const s = this.state;
     const dt = clamp(Number.isFinite(dtSec) ? dtSec : 0, 0, 0.1);
     s.steering = clamp(Number.isFinite(steering) ? steering : 0, -1, 1);
     s.braking = braking === true;
 
     // Gentle braking and gentle pick-up; never reverses. Slowing to a lower target uses the brakes.
-    const target = s.braking ? 0 : this.cfg.speed * this.cruiseScale;
+    const boost = clamp(Number.isFinite(speedMultiplier) ? speedMultiplier : 1, 1, 3);
+    const target = s.braking ? 0 : this.getCruisingSpeed() * this.cruiseScale * boost;
     const rate = target < s.speed ? this.cfg.brakeDecel : this.cfg.acceleration;
     s.speed = approach(s.speed, target, rate * dt);
     s.progress += s.speed * dt;
 
     // Sideways motion scales with forward speed: a stopped bus cannot slide.
-    const speedFactor = s.speed / this.cfg.speed;
+    const speedFactor = Math.min(1, s.speed / this.cfg.speed);
 
     // Lateral velocity follows steering smoothly.
     let targetVel = s.steering * this.cfg.maxLateralSpeed;
