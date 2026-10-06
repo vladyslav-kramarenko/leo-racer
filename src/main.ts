@@ -9,6 +9,7 @@ import { DiagnosticsOverlay } from './ui/DiagnosticsOverlay';
 import { createAddDrawingScreen, createManageDrawingsScreen } from './ui/DrawingDialog';
 import { downloadJson } from './ui/dom';
 import { EndScreen } from './ui/EndScreen';
+import { GearIndicator } from './ui/GearIndicator';
 import { ParentGesture, ParentMenu, type TiltStatus } from './ui/ParentMenu';
 import { StartScreen } from './ui/StartScreen';
 import { TouchBrakeIndicator } from './ui/TouchBrakeIndicator';
@@ -65,9 +66,14 @@ async function main(): Promise<void> {
   brakeIndicator.mount(root);
   game.input.touchBrake.onChange((braking) => brakeIndicator.setVisible(braking));
 
+  const gearIndicator = new GearIndicator();
+  gearIndicator.mount(root);
+  game.onGearChange((gear) => gearIndicator.show(gear));
+
   const endScreen = new EndScreen();
   endScreen.mount(root);
   game.onSessionPhase((phase) => {
+    if (phase !== 'running') gearIndicator.hide();
     if (phase === 'finished') endScreen.show();
     else if (phase === 'running') endScreen.hide();
   });
@@ -96,9 +102,17 @@ async function main(): Promise<void> {
       userAgent: navigator.userAgent,
     });
 
+  const selectWorld = (id: string) => {
+    if (id === preset.id) return;
+    settings = saveSettings({ worldId: id });
+    // Reload to rebuild the world with the selected preset.
+    location.reload();
+  };
+
   const menu = new ParentMenu(
     {
       pause: () => {
+        gearIndicator.hide();
         game.setPaused(true);
         audio.setDucked(true);
       },
@@ -126,12 +140,7 @@ async function main(): Promise<void> {
       },
       worlds: () => listPresets().map((p) => ({ id: p.id, name: p.name, thumbnail: p.thumbnail })),
       currentWorld: () => preset.id,
-      selectWorld: (id) => {
-        if (id === preset.id) return;
-        settings = saveSettings({ worldId: id });
-        // Reload instead of hot-swapping Three.js resources: no disposal bugs, no stale state.
-        location.reload();
-      },
+      selectWorld,
       drawingCount: () => drawings.list().length,
       playTimeMinutes: () => settings.playTimeMinutes,
       setPlayTimeMinutes: (minutes) => {
@@ -167,7 +176,7 @@ async function main(): Promise<void> {
       manageDrawings: createManageDrawingsScreen(drawings),
       calibrateWheel: createWheelSetupScreen(game.input.gamepad, (cal) => {
         settings = saveSettings({ calibration: cal });
-        game.setCalibration(cal);
+        game.setCalibration(settings.calibration);
       }),
     },
   );
@@ -182,7 +191,7 @@ async function main(): Promise<void> {
     start.hide();
     // Parent gestures only once driving started, so the start screen stays simple.
     new ParentGesture(menu).attach(root);
-  });
+  }, { worlds: listPresets(), currentId: preset.id, onSelect: selectWorld });
   start.mount(root);
 
   if (import.meta.env.DEV) {
