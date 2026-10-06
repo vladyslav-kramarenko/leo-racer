@@ -91,6 +91,7 @@ export class DrawingSpriteLayer {
   private lastProgress = 0;
   private readonly p = { x: 0, z: 0 };
   private spawnListener: ((id: string) => void) | null = null;
+  private contactListener: (() => void) | null = null;
 
   constructor(
     private readonly road: RoadPath,
@@ -105,6 +106,10 @@ export class DrawingSpriteLayer {
   /** Called whenever a drawing appears in the world (diagnostics: impressions). */
   onSpawn(listener: (id: string) => void): void {
     this.spawnListener = listener;
+  }
+
+  onContact(listener: () => void): void {
+    this.contactListener = listener;
   }
 
   setSources(sources: readonly SpriteSource[]): void {
@@ -187,6 +192,7 @@ export class DrawingSpriteLayer {
       }
       const crossedDone = a.pattern === 'crossingFar' && Math.sign(a.vd) * (a.d - a.endD) > 0;
       const bumped = isLane(a.pattern) && overlapsBus(a.s, a.d, progress, busD, a.halfWidth);
+      if (bumped) this.contactListener?.();
       if (a.s < progress - 14 || a.s > progress + 260 || a.age > 90 || crossedDone || bumped) {
         this.release(i);
         continue;
