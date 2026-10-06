@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../game/config';
+import { circuitPose, type CircuitPose } from './circuitPath';
 import { buildPropModel, type PartAnim, type PropModel } from './props';
 import type { PropKind, PropSpec, PropsPreset } from './presets/types';
 import { createRng, hashInt, randRange } from './random';
@@ -51,6 +52,8 @@ export class ObjectSpawner {
   private readonly v = new THREE.Vector3();
   private readonly sc = new THREE.Vector3();
   private readonly up = new THREE.Vector3(0, 1, 0);
+  private readonly circuit: CircuitPose = { x: 0, z: 0, yaw: 0 };
+  private readonly tow: CircuitPose = { x: 0, z: 0, yaw: 0 };
 
   constructor(
     private readonly road: RoadGenerator,
@@ -144,6 +147,11 @@ export class ObjectSpawner {
       const s = s0 + L * (0.4 + rng() * 0.2);
       const d = spec.roadCentered ? 0 : side * (EDGE + randRange(rng, spec.minDistance, spec.maxDistance));
       this.place(slot, used, spec.kind, s, d, randRange(rng, spec.scale[0], spec.scale[1]), this.yawFor(spec.facing, s, side, rng), rng);
+      const pool = this.pools.get(spec.kind);
+      if (pool?.exclusion) {
+        const idx = slot * pool.perSlot + (used.get(spec.kind) ?? 1) - 1;
+        this.clearReservedArea(this.exclusionAreas[pool.exclusion.offset + idx]);
+      }
     }
 
     const count = this.randomItems.length ? Math.floor(randRange(rng, this.preset.perChunk[0], this.preset.perChunk[1] + 1)) : 0;
@@ -192,6 +200,29 @@ export class ObjectSpawner {
         }
       }
       for (const part of pool.parts) part.mesh.instanceMatrix.needsUpdate = true;
+    }
+  }
+
+  /** A new landmark can overlap a neighbouring chunk populated earlier. */
+  private clearReservedArea(area: { bounds: THREE.Vector4; rotation: THREE.Vector2 }): void {
+    for (const spec of this.randomItems) {
+      const pool = this.pools.get(spec.kind)!;
+      for (let idx = 0; idx < pool.active.length; idx++) {
+        if (!pool.active[idx]) continue;
+        const dx = pool.base[idx].elements[12] - area.bounds.x;
+        const dz = pool.base[idx].elements[14] - area.bounds.y;
+        if (Math.abs(dx * area.rotation.x - dz * area.rotation.y) >= area.bounds.z
+          || Math.abs(dx * area.rotation.y + dz * area.rotation.x) >= area.bounds.w) continue;
+        pool.active[idx] = false;
+        pool.mesh.setMatrixAt(idx, ZERO);
+        pool.mesh.instanceMatrix.needsUpdate = true;
+        for (const part of pool.parts) {
+          part.mesh.setMatrixAt(idx, ZERO);
+          part.mesh.instanceMatrix.needsUpdate = true;
+        }
+        if (pool.cutout) this.groundCutouts[pool.cutout.offset + idx].set(0, 0, 0, 0);
+        if (pool.exclusion) this.exclusionAreas[pool.exclusion.offset + idx].bounds.set(0, 0, 0, 0);
+      }
     }
   }
 
@@ -261,6 +292,26 @@ export class ObjectSpawner {
         this.m2.makeRotationY(Math.atan2(a.radius[0] * Math.sin(angle), -a.radius[1] * Math.cos(angle)));
         this.m2.setPosition(part.pivot.x + a.radius[0] * Math.cos(angle), part.pivot.y,
           part.pivot.z + a.radius[1] * Math.sin(angle));
+        this.m.multiplyMatrices(base, this.m2);
+        return;
+      }
+      case 'circuit': {
+        const length = 4 * a.halfStraight + 2 * Math.PI * a.radius;
+        const distance = (t / a.period + phase / (2 * Math.PI)) * length - a.behind;
+        const p = circuitPose(distance, a.radius, a.halfStraight, this.circuit);
+        this.m2.makeRotationY(p.yaw);
+        this.m2.setPosition(part.pivot.x + p.x, part.pivot.y, part.pivot.z + p.z);
+        if (a.towTo !== undefined) {
+          // Join the actual rear/front hitches, including when successive vehicles turn.
+          const lead = circuitPose(distance + a.towTo, a.radius, a.halfStraight, this.tow);
+          const x0 = p.x - Math.sin(p.yaw) * 2;
+          const z0 = p.z - Math.cos(p.yaw) * 2;
+          const x1 = lead.x + Math.sin(lead.yaw) * 1.9;
+          const z1 = lead.z + Math.cos(lead.yaw) * 1.9;
+          this.m2.makeRotationY(Math.atan2(x1 - x0, z1 - z0));
+          this.m2.scale(this.sc.set(1, 1, Math.hypot(x1 - x0, z1 - z0)));
+          this.m2.setPosition(part.pivot.x + (x0 + x1) / 2, part.pivot.y, part.pivot.z + (z0 + z1) / 2);
+        }
         this.m.multiplyMatrices(base, this.m2);
         return;
       }

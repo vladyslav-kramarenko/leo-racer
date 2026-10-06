@@ -41,6 +41,7 @@ Leo Racer is a browser driving toy for children aged 2–4.
   Santa occasionally flies across the road in a red sleigh with four galloping reindeer and a stack of gifts, waving to the bus.
   Farm is an autumn harvest world: pumpkin patches with bunting and scarecrows, roadside produce stands, golden corn, fallen leaves and orange/red trees alongside barns, hay bales, cows and sheep.
   A yellow utility biplane with a spinning propeller occasionally flies across the Farm road above the fields.
+  A harvest tractor pulls three open wagons of visitors around a dirt oval beside the road, with hay bales, pumpkins and autumn bunting.
   City is Vancouver-inspired: glass towers, the seawall, SkyTrain overhead, cherry blossoms and simplified landmarks.
 - **Many inputs:**
   - Keyboard steering, brake and horn.

@@ -57,6 +57,7 @@ export type PropKind =
   | 'pumpkinPile'
   | 'pumpkinPatch'
   | 'harvestStand'
+  | 'harvestRide'
   | 'scarecrow'
   | 'leafPile'
   | 'cornRows'

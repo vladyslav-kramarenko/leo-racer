@@ -63,6 +63,8 @@ export const farm: WorldPreset = {
         side: 'right', facing: 'road', every: { chunks: 6, offset: 1 } },
       { kind: 'harvestStand', weight: 1, minDistance: 6, maxDistance: 7, scale: [1, 1], maxPerChunk: 1,
         side: 'left', facing: 'road', every: { chunks: 6, offset: 4 } },
+      { kind: 'harvestRide', weight: 1, minDistance: 16.5, maxDistance: 16.5, scale: [1, 1], maxPerChunk: 1,
+        side: 'right', facing: 'traffic', every: { chunks: 6, offset: 3 } },
     ],
   },
   cropDuster: { altitude: 24, intervalSec: [28, 43] },

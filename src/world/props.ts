@@ -6,6 +6,7 @@ import { quarry } from './quarry';
 import { pipeTrench } from './pipeTrench';
 import { wildlife, wildlifeBridge } from './wildlife';
 import { autumnTree, cornRows, harvestStand, leafPile, pumpkinPatch, pumpkinPile, scarecrow } from './autumnProps';
+import { harvestRide } from './harvestRide';
 import { chalet, fox, hare, iceRink, skiSlope, sledHill, snowbank, snowFort, snowman, snowPine } from './winterProps';
 
 /**
@@ -38,7 +39,9 @@ export type PartAnim =
   /** An animal walking back and forth over a flat wildlife overpass, turning at the ends. */
   | { type: 'crossing'; span: number; period: number }
   /** Follows an ellipse, facing the direction of travel (ice skaters). */
-  | { type: 'orbit'; radius: [number, number]; period: number };
+  | { type: 'orbit'; radius: [number, number]; period: number }
+  /** A convoy on an oval; distance behind the leader keeps wagons on the same track. */
+  | { type: 'circuit'; radius: number; halfStraight: number; period: number; behind: number; towTo?: number };
 
 export interface PartModel {
   /** Geometry in part-local space (pivot at the origin). */
@@ -1015,6 +1018,7 @@ const BUILDERS: Record<PropKind, () => PropModel> = {
   pumpkinPile,
   pumpkinPatch,
   harvestStand,
+  harvestRide,
   scarecrow,
   leafPile,
   cornRows,
