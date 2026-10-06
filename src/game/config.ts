@@ -42,7 +42,7 @@ export const CONFIG = {
   },
 
   driving: {
-    /** Constant forward speed in m/s (~30 km/h). */
+    /** Normal cruising speed in m/s (~30 km/h); accelerator boosts it up to 3×. */
     speed: 8.3,
     /** Braking deceleration, m/s² (7.5 m/s → stop in ~1.2 s). */
     brakeDecel: 6,
