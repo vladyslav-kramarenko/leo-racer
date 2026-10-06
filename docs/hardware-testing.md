@@ -117,6 +117,12 @@ Nature is a separate Banff-inspired forest world. Confirm all six location cards
 
 ## Winter ski village
 
+Santa's red sleigh first appears after about 4 seconds of driving, crosses the road ahead over 12 seconds, then returns from the other side after a 25–40 second break. Check four galloping reindeer (one with a red nose), presents, curved gold runners and Santa waving. The flight clears the ski village and remains ahead at normal or boosted speed. Parent-menu pause must freeze the sleigh, waving hand and reindeer legs; resume must continue the same flight.
+
 Select Winter on the entrance screen, then drive past the ski slope on the right (around 40–80 m), skating pond on the left (160–200 m), and sled hill on the right (280–320 m). These scenes repeat every 400 m. Skiers descend on the snow, open chairs carry passengers up and down the cables, and skaters follow loops on the ice. Forest props must leave the scenes clear, and the road must stay open. Check warm chalet windows, chimney smoke, snowmen, snow forts, foxes and white hares. At Normal traffic density, look for an orange snowplow with a wide blade and pickups with roof-mounted skis; other cars must leave enough room for the blade. Opening the Parent Menu must pause snow and all moving scenes. Changing to Winter there must resume driving directly. Reloading must keep Winter selected, and all six cards plus START must fit on desktop and phone screens.
 
 Design reference: [Parks Canada on Banff wildlife crossings](https://www.parks.canada.ca/nature/science/especes-species/routes-roads?wbdisable=true). The world uses original toy models inspired by the park, with no attempt to recreate a specific road or exact bridge.
+
+## Autumn Farm harvest
+
+Farm keeps its existing saved selection and dirt-road driving behavior. Check the warm sky, gold/olive harvested fields, orange/red trees, leaf piles and roadside pumpkin clusters. A pumpkin patch appears on the right around 40–80 m, with four rows of six pumpkins, vines, a pumpkin entry emblem, bunting, hay bales and a friendly scarecrow. A striped harvest stand appears on the left around 160–200 m, with pumpkins, apples and pears. Both repeat every 240 m. Cows, sheep, barns, silos, tractors and windmills still appear. Random props must stay out of the field and stand, the fence must leave their frontage visible, and the road must remain clear. Check the updated Farm thumbnail in both location pickers and on reload.

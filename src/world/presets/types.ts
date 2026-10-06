@@ -53,6 +53,13 @@ export type PropKind =
   | 'sheep'
   | 'windmill'
   | 'tractor'
+  | 'autumnTree'
+  | 'pumpkinPile'
+  | 'pumpkinPatch'
+  | 'harvestStand'
+  | 'scarecrow'
+  | 'leafPile'
+  | 'cornRows'
   // City
   | 'house'
   | 'building'
@@ -243,6 +250,7 @@ export interface WorldPreset {
   freightRailway?: FreightRailwayPreset;
   /** A fixed pool of gently falling snowflakes around the player. */
   snowfall?: { count: number; speed: number };
+  santaSleigh?: { altitude: number; intervalSec: [number, number] };
   audio: AudioPreset;
 }
 

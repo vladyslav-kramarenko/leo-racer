@@ -5,6 +5,7 @@ import { carParts, dumpTruckParts, tractorParts, TOY } from './toyParts';
 import { quarry } from './quarry';
 import { pipeTrench } from './pipeTrench';
 import { wildlife, wildlifeBridge } from './wildlife';
+import { autumnTree, cornRows, harvestStand, leafPile, pumpkinPatch, pumpkinPile, scarecrow } from './autumnProps';
 import { chalet, fox, hare, iceRink, skiSlope, sledHill, snowbank, snowFort, snowman, snowPine } from './winterProps';
 
 /**
@@ -1010,6 +1011,13 @@ const BUILDERS: Record<PropKind, () => PropModel> = {
   barn,
   silo,
   hayBale,
+  autumnTree,
+  pumpkinPile,
+  pumpkinPatch,
+  harvestStand,
+  scarecrow,
+  leafPile,
+  cornRows,
   cow,
   sheep,
   windmill,

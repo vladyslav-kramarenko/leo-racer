@@ -19,7 +19,7 @@ Leo Racer is a browser driving toy for children aged 2–4.
 | --- | --- |
 | ![Construction world](docs/images/construction.jpg) | ![Sea to Sky world](docs/images/nature.jpg) |
 | **Farm** | **City** |
-| ![Farm world](docs/images/farm.jpg) | ![City world](docs/images/city.jpg) |
+| ![Autumn Farm world](public/worlds/farm.jpg) | ![City world](docs/images/city.jpg) |
 
 **Nature — a Banff-inspired forest with wildlife overpasses.**
 
@@ -38,6 +38,8 @@ Leo Racer is a browser driving toy for children aged 2–4.
 - **Six worlds:** Construction, Sea to Sky, Nature, Winter, Farm and City. All are endless and pure data presets on one engine. Props are animated: cranes turn, windmills spin, traffic lights cycle.
   Sea to Sky has the sea, snowy mountains, a gondola and a historical steam freight train. Nature is a forest with wild animals and wildlife overpasses.
   Winter has falling snow, a moving chairlift and skiers, ice skaters with hockey goals, a sled hill, warm chalet windows and chimney smoke, snowmen, snow forts, foxes and white hares. Snowplows and pickups carrying skis drive along the cleared road.
+  Santa occasionally flies across the road in a red sleigh with four galloping reindeer and a stack of gifts, waving to the bus.
+  Farm is an autumn harvest world: pumpkin patches with bunting and scarecrows, roadside produce stands, golden corn, fallen leaves and orange/red trees alongside barns, hay bales, cows and sheep.
   City is Vancouver-inspired: glass towers, the seawall, SkyTrain overhead, cherry blossoms and simplified landmarks.
 - **Many inputs:**
   - Keyboard steering, brake and horn.
