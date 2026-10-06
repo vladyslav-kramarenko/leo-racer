@@ -65,6 +65,7 @@ export const farm: WorldPreset = {
         side: 'left', facing: 'road', every: { chunks: 6, offset: 4 } },
     ],
   },
+  cropDuster: { altitude: 24, intervalSec: [28, 43] },
   traffic: { enabled: true, vehicles: ['tractor', 'pickup', 'car', 'van'] },
   audio: {
     engineBaseHz: 50,

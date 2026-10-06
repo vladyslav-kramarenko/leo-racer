@@ -125,4 +125,6 @@ Design reference: [Parks Canada on Banff wildlife crossings](https://www.parks.c
 
 ## Autumn Farm harvest
 
+The yellow crop-duster biplane first begins its flypast after about 5 seconds, flies diagonally across the road for 14 seconds, and returns from the other side after a 28–43 second break. Check both wings with red tips, the glazed cabin, wheels and spinning nose propeller. The entire plane must clear barns, silos, windmills and trees, and the crossing should be visible ahead at cruise or boosted speed. Opening the Parent Menu must freeze both flight and propeller; resuming must continue the flight.
+
 Farm keeps its existing saved selection and dirt-road driving behavior. Check the warm sky, gold/olive harvested fields, orange/red trees, leaf piles and roadside pumpkin clusters. A pumpkin patch appears on the right around 40–80 m, with four rows of six pumpkins, vines, a pumpkin entry emblem, bunting, hay bales and a friendly scarecrow. A striped harvest stand appears on the left around 160–200 m, with pumpkins, apples and pears. Both repeat every 240 m. Cows, sheep, barns, silos, tractors and windmills still appear. Random props must stay out of the field and stand, the fence must leave their frontage visible, and the road must remain clear. Check the updated Farm thumbnail in both location pickers and on reload.

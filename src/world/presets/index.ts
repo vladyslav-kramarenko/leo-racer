@@ -69,6 +69,11 @@ export function validatePreset(preset: WorldPreset): string[] {
     if (!Number.isFinite(altitude) || altitude < 34) errors.push('santaSleigh.altitude must clear the ski village (>= 34 m)');
     if (!Number.isFinite(low) || !Number.isFinite(high) || low < 1 || high < low) errors.push('santaSleigh.intervalSec must be a positive [min, max]');
   }
+  if (preset.cropDuster) {
+    const { altitude, intervalSec: [low, high] } = preset.cropDuster;
+    if (!Number.isFinite(altitude) || altitude < 20) errors.push('cropDuster.altitude must clear farm buildings (>= 20 m)');
+    if (!Number.isFinite(low) || !Number.isFinite(high) || low < 1 || high < low) errors.push('cropDuster.intervalSec must be a positive [min, max]');
+  }
   if (preset.snowfall && (!Number.isInteger(preset.snowfall.count) || preset.snowfall.count < 1
     || preset.snowfall.count > 1000 || !Number.isFinite(preset.snowfall.speed) || preset.snowfall.speed <= 0)) {
     errors.push('snowfall needs 1–1000 flakes and a positive speed');

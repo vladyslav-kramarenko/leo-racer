@@ -250,8 +250,15 @@ export interface WorldPreset {
   freightRailway?: FreightRailwayPreset;
   /** A fixed pool of gently falling snowflakes around the player. */
   snowfall?: { count: number; speed: number };
-  santaSleigh?: { altitude: number; intervalSec: [number, number] };
+  santaSleigh?: FlypastPreset;
+  cropDuster?: FlypastPreset;
   audio: AudioPreset;
+}
+
+/** Occasional aircraft/sleigh crossing above the road. */
+export interface FlypastPreset {
+  altitude: number;
+  intervalSec: [number, number];
 }
 
 /** Historical steam freight on ground-level rails to the right of the road. */

@@ -40,6 +40,7 @@ Leo Racer is a browser driving toy for children aged 2–4.
   Winter has falling snow, a moving chairlift and skiers, ice skaters with hockey goals, a sled hill, warm chalet windows and chimney smoke, snowmen, snow forts, foxes and white hares. Snowplows and pickups carrying skis drive along the cleared road.
   Santa occasionally flies across the road in a red sleigh with four galloping reindeer and a stack of gifts, waving to the bus.
   Farm is an autumn harvest world: pumpkin patches with bunting and scarecrows, roadside produce stands, golden corn, fallen leaves and orange/red trees alongside barns, hay bales, cows and sheep.
+  A yellow utility biplane with a spinning propeller occasionally flies across the Farm road above the fields.
   City is Vancouver-inspired: glass towers, the seawall, SkyTrain overhead, cherry blossoms and simplified landmarks.
 - **Many inputs:**
   - Keyboard steering, brake and horn.

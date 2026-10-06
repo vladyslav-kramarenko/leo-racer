@@ -5,6 +5,7 @@ import { Guideway } from './Guideway';
 import { FreightRailway } from './FreightRailway';
 import { Snowfall } from './Snowfall';
 import { SantaSleigh } from './SantaSleigh';
+import { CropDuster } from './CropDuster';
 import { applyGroundCutouts } from './groundCutouts';
 import { box, buildColoredGeometry, cone, makeCanvas, rbox } from './geometry';
 import { ObjectSpawner } from './ObjectSpawner';
@@ -30,6 +31,7 @@ export class WorldManager {
   readonly freightRailway: FreightRailway | null;
   readonly snowfall: Snowfall | null;
   readonly santaSleigh: SantaSleigh | null;
+  readonly cropDuster: CropDuster | null;
   private readonly sun: THREE.DirectionalLight;
   private readonly terrainTile = 24;
 
@@ -82,6 +84,8 @@ export class WorldManager {
     if (this.snowfall) this.group.add(this.snowfall.points);
     this.santaSleigh = preset.santaSleigh ? new SantaSleigh(this.road, preset.santaSleigh) : null;
     if (this.santaSleigh) this.group.add(this.santaSleigh.group);
+    this.cropDuster = preset.cropDuster ? new CropDuster(this.road, preset.cropDuster) : null;
+    if (this.cropDuster) this.group.add(this.cropDuster.group);
     this.group.add(this.chunks.group, this.props.group);
     scene.add(this.group);
   }
@@ -94,6 +98,7 @@ export class WorldManager {
     this.freightRailway?.update(dt, progress);
     this.snowfall?.update(dt, focus);
     this.santaSleigh?.update(dt, progress);
+    this.cropDuster?.update(dt, progress);
 
     // Terrain follows the vehicle while its texture stays fixed in world space.
     this.terrain.position.set(focus.x, 0, focus.z);
