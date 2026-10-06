@@ -15,6 +15,32 @@ export interface WheelCalibration {
   center: number;
   max: number;
   deadzone: number;
+  /** Optional for compatibility with existing steering-only settings. */
+  brake?: PedalCalibration;
+  throttle?: PedalCalibration;
+  gearButtons?: { up: number; down: number };
+  secondaryGearButtons?: { up: number; down: number } | null;
+}
+
+export interface PedalCalibration {
+  axis: number;
+  released: number;
+  pressed: number;
+}
+
+/** Supports separate or combined pedal axes, in either direction. */
+export function normalizePedal(raw: number, cal: PedalCalibration): number {
+  const span = cal.pressed - cal.released;
+  if (!Number.isFinite(raw) || !Number.isFinite(span) || Math.abs(span) < 0.1) return 0;
+  return Math.max(0, Math.min(1, (raw - cal.released) / span));
+}
+
+/** Ignore pedal jitter; map its active travel linearly from 1.5× to 3×. */
+export function pedalSpeedMultiplier(throttle: number): number {
+  const deadzone = 0.1;
+  if (!Number.isFinite(throttle) || throttle <= deadzone) return 1;
+  const travel = (clamp(throttle, 0, 1) - deadzone) / (1 - deadzone);
+  return 1.5 + travel * 1.5;
 }
 
 export function clamp(value: number, min: number, max: number): number {
