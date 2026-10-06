@@ -27,7 +27,7 @@ export class GamepadInput implements SteeringInput {
   private throttle = 0;
   private connected: GamepadSnapshot | null = null;
   private prevButtons: boolean[] = [];
-  private hornListener: (() => void) | null = null;
+  private hornListener: ((variant: number) => void) | null = null;
   private shiftListener: ((direction: -1 | 1) => void) | null = null;
   private buttonsNeedBaseline = true;
   private calibration: WheelCalibration | null = null;
@@ -45,7 +45,7 @@ export class GamepadInput implements SteeringInput {
     return this.calibration;
   }
 
-  onHorn(listener: () => void): void {
+  onHorn(listener: (variant: number) => void): void {
     this.hornListener = listener;
   }
 
@@ -95,8 +95,12 @@ export class GamepadInput implements SteeringInput {
     const downPressed = sets.some((set) => rising(set.down));
     if (upPressed !== downPressed) this.shiftListener?.(upPressed ? 1 : -1);
     // Shift buttons are reserved; other buttons still honk on the rising edge.
-    const pressedNow = pad.buttons.some((b, i) => !sets.some((set) => i === set.up || i === set.down) && b && !this.prevButtons[i]);
-    if (pressedNow) this.hornListener?.();
+    let hornIndex = 0;
+    pad.buttons.forEach((pressed, button) => {
+      if (sets.some((set) => button === set.up || button === set.down)) return;
+      if (pressed && !this.prevButtons[button]) this.hornListener?.(hornIndex % 6);
+      hornIndex++;
+    });
     this.prevButtons = pad.buttons.slice();
   }
 

@@ -37,9 +37,9 @@ export class InputManager implements SteeringInput {
     this.gamepad.setCalibration(cal);
   }
 
-  onHorn(listener: () => void): void {
-    this.keyboard.onHorn(listener);
-    this.gamepad.onHorn(listener);
+  onHorn(listener: (variant: number) => void): void {
+    this.keyboard.onHorn((variant) => { this.used.add('keyboard'); listener(variant); });
+    this.gamepad.onHorn((variant) => { this.used.add('gamepad'); listener(variant); });
   }
 
   onShift(listener: (direction: -1 | 1) => void): void {

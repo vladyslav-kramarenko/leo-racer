@@ -1,4 +1,5 @@
 import type { AmbientEvent, AudioPreset } from '../world/presets/types';
+import { HORNS } from './horns';
 
 /** Engine loudness at cruise. Kept low so the bus hums gently instead of droning. */
 const ENGINE_GAIN = 0.055;
@@ -26,7 +27,7 @@ export class AudioManager {
   private nextEvent = 3;
   private events: AmbientEvent[] = [];
   private eventInterval: [number, number] = [3, 8];
-  private hornUntil = 0;
+  private hornUntil = Array<number>(HORNS.length).fill(0);
   private zoomUntil = 0;
   private baseHz = 52;
   private whiteNoise: AudioBuffer | null = null;
@@ -180,33 +181,17 @@ export class AudioManager {
     this.engineGain.gain.setTargetAtTime(ENGINE_GAIN * Math.max(0, Math.min(1, level)), this.ctx.currentTime, 0.6);
   }
 
-  horn(): void {
+  horn(variant = 0): void {
     const ctx = this.ctx;
     if (!ctx || !this.master || !this.enabled) return;
     const now = ctx.currentTime;
-    if (now < this.hornUntil) return;
-    this.hornUntil = now + 0.55;
-    for (const [start, freqs] of [
-      [0, [392, 494]],
-      [0.26, [392, 494]],
-    ] as const) {
-      const g = ctx.createGain();
-      g.gain.setValueAtTime(0, now + start);
-      g.gain.linearRampToValueAtTime(0.16, now + start + 0.02);
-      g.gain.setValueAtTime(0.16, now + start + 0.16);
-      g.gain.linearRampToValueAtTime(0, now + start + 0.22);
-      g.connect(this.master);
-      for (const f of freqs) {
-        const osc = ctx.createOscillator();
-        osc.type = 'square';
-        osc.frequency.value = f;
-        const lp = ctx.createBiquadFilter();
-        lp.frequency.value = 1800;
-        osc.connect(lp).connect(g);
-        osc.start(now + start);
-        osc.stop(now + start + 0.25);
-      }
-    }
+    const index = Number.isInteger(variant) && variant >= 0 && variant < HORNS.length ? variant : 0;
+    if (now < this.hornUntil[index]) return;
+    const sound = HORNS[index];
+    this.hornUntil[index] = now + (sound.notes.length - 1) * sound.spacing + sound.decay + 0.05;
+    sound.notes.forEach((freqs, note) => {
+      tone(ctx, this.master!, now + note * sound.spacing, sound.type, [...freqs], 0.22, 0.015, sound.decay, sound.cutoff);
+    });
   }
 
   /**

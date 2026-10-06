@@ -46,6 +46,28 @@ describe('gear ratios', () => {
 });
 
 describe('wheel shift buttons', () => {
+  it('assigns six distinct horns to non-gear buttons and ignores held buttons', () => {
+    let buttons = Array<boolean>(10).fill(false);
+    const input = new GamepadInput(() => [{ id: 'Wheel', index: 0, connected: true, axes: [0],
+      buttons: buttons.map((pressed) => ({ pressed, value: Number(pressed), touched: pressed })),
+    } as unknown as Gamepad]);
+    input.setCalibration({ gamepadId: 'Wheel', steeringAxis: 0, min: -1, center: 0, max: 1,
+      invertAxis: false, deadzone: 0.04, gearButtons: { up: 5, down: 4 }, secondaryGearButtons: { up: 8, down: 9 } });
+    const horn = vi.fn();
+    input.onHorn(horn);
+    input.update();
+    for (const button of [0, 1, 2, 3, 6, 7]) {
+      buttons[button] = true;
+      input.update(); input.update();
+      buttons[button] = false;
+      input.update();
+    }
+    expect(horn.mock.calls).toEqual([[0], [1], [2], [3], [4], [5]]);
+    buttons = buttons.map((_, button) => [4, 5, 8, 9].includes(button));
+    input.update();
+    expect(horn).toHaveBeenCalledTimes(6);
+  });
+
   it('accepts both sets, coalesces same-direction presses and reserves all four buttons', () => {
     const { input, shift, horn, set } = wheel();
     input.setCalibration({ gamepadId: 'Wheel', steeringAxis: 0, min: -1, center: 0, max: 1,

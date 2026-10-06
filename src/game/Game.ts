@@ -93,10 +93,10 @@ export class Game {
     this.session = new SessionManager(options.playTimeMinutes, options.endingDurationMs);
     this.loop = new GameLoop((dt, now) => this.frame(dt, now));
 
-    this.input.onHorn(() => {
+    this.input.onHorn((variant) => {
       if (!this.driving || this.paused) return;
       this.metrics.markHorn();
-      this.audio.horn();
+      this.audio.horn(variant);
     });
     this.input.onShift((direction) => {
       if (!this.driving || this.paused || this.isEnding()) return;

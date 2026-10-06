@@ -275,6 +275,7 @@ export function createWheelSetupScreen(
       const hapticStatus = h('p', { class: 'hint' });
       body.append(
         h('p', { class: 'prompt' }, 'Wheel calibrated!'),
+        h('p', { class: 'hint' }, 'Horn sounds 1–6 use the first six buttons not assigned to gears, in button-number order. Keyboard: 1–6 (also numpad); Space / H plays sound 1.'),
         h('p', { class: 'hint' }, `Axis ${cal.steeringAxis}${cal.invertAxis ? ' (inverted)' : ''}. Try it: the marker should follow the wheel.`),
         meter,
         pedalStatus,

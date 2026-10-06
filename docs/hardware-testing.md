@@ -92,3 +92,9 @@ Open the Parent Menu (hold `Esc` for 2 s) → Diagnostics → Overlay: **Shown**
 - In fullscreen, a single `Esc` press exits fullscreen (browser behaviour). Hold `Esc` again to open the Parent Menu.
 - Chrome may only report some wheels with a limited axis range until the vendor driver (Logitech G HUB / Gaming Software) is installed.
   Calibration handles any range ≥ 0.3.
+
+## Six horn sounds
+
+While driving, press keyboard **1–6** (top row or numpad) to test: double beep, truck horn, bicycle bell, happy melody, high-low horn, and cartoon toot. **Space / H** plays the first sound.
+
+On the wheel, the first six buttons not assigned to either gear set play sounds 1–6 in button-number order. Gear buttons remain reserved for shifting. Additional buttons repeat the six sounds. Hold a button to check that it only triggers once; release and press again to replay. Test with sound enabled and the parent menu closed.

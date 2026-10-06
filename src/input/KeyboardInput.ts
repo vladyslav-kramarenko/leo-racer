@@ -54,7 +54,7 @@ const HORN_CODES = new Set(['Space', 'KeyH']);
 export class KeyboardInput implements SteeringInput {
   readonly steering: KeyboardSteering;
   private readonly pressed = new Set<string>();
-  private hornListener: (() => void) | null = null;
+  private hornListener: ((variant: number) => void) | null = null;
   /** Set whenever a steering key goes down; consumed by InputManager. */
   private keyEvent = false;
 
@@ -73,9 +73,9 @@ export class KeyboardInput implements SteeringInput {
       } else if (BRAKE_CODES.has(e.code) || THROTTLE_CODES.has(e.code)) {
         e.preventDefault();
         this.pressed.add(e.code);
-      } else if (HORN_CODES.has(e.code) && !e.repeat) {
+      } else if (HORN_CODES.has(e.code) || /^(Digit|Numpad)[1-6]$/.test(e.code)) {
         e.preventDefault();
-        this.hornListener?.();
+        if (!e.repeat) this.hornListener?.(HORN_CODES.has(e.code) ? 0 : Number(e.code.slice(-1)) - 1);
       }
     };
     const up = (e: KeyboardEvent) => {
@@ -95,7 +95,7 @@ export class KeyboardInput implements SteeringInput {
     };
   }
 
-  onHorn(listener: () => void): void {
+  onHorn(listener: (variant: number) => void): void {
     this.hornListener = listener;
   }
 
