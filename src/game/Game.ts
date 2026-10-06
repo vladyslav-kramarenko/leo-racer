@@ -7,6 +7,7 @@ import { Autopilot } from '../driving/Autopilot';
 import { SteeringMixer } from '../driving/SteeringMixer';
 import { VehicleController } from '../driving/VehicleController';
 import { InputManager } from '../input/InputManager';
+import { roadEdgeStrength } from '../input/HapticFeedback';
 import type { WheelCalibration } from '../input/SteeringState';
 import { SessionManager } from '../session/SessionManager';
 import type { SessionPhase } from '../session/SessionState';
@@ -55,6 +56,7 @@ export class Game {
   private readonly loop: GameLoop;
   private readonly busPosition = new THREE.Vector3();
   private readonly phaseListeners: ((phase: SessionPhase) => void)[] = [];
+  private readonly gearListeners: ((gear: number) => void)[] = [];
   private driving = false;
   private paused = false;
   private timeSec = 0;
@@ -80,6 +82,11 @@ export class Game {
       if (this.driving && !this.paused) this.audio.zoom();
     });
     this.sprites = new DrawingSpriteLayer(this.world.road);
+    const contact = () => {
+      if (this.driving && !this.paused && !this.isEnding()) this.input.gamepad.haptics.impact(performance.now());
+    };
+    this.traffic.onContact(contact);
+    this.sprites.onContact(contact);
     this.sprites.onSpawn((id) => this.metrics.markImpression(id));
     this.scenes.scene.add(this.sprites.group);
     this.cameraRig = new CameraRig(this.scenes.camera, this.world.road);
@@ -90,6 +97,13 @@ export class Game {
       if (!this.driving || this.paused) return;
       this.metrics.markHorn();
       this.audio.horn();
+    });
+    this.input.onShift((direction) => {
+      if (!this.driving || this.paused || this.isEnding()) return;
+      const previous = this.vehicle.gearbox.getGear();
+      this.vehicle.gearbox.shift(direction);
+      const gear = this.vehicle.gearbox.getGear();
+      if (gear !== previous) this.gearListeners.forEach((listener) => listener(gear));
     });
   }
 
@@ -109,6 +123,7 @@ export class Game {
 
   setPaused(paused: boolean): void {
     this.paused = paused;
+    if (paused) this.input.gamepad.haptics.stop();
     this.input.touchBrake.setEnabled(!paused && !this.isEnding());
   }
 
@@ -134,6 +149,7 @@ export class Game {
   /** Parent action only: start a fresh session after the ending. */
   restartSession(): void {
     this.session.restart();
+    this.vehicle.gearbox.reset();
     this.vehicle.setCruiseScale(1);
     this.mixer.setForcedAutopilot(false);
     this.input.touchBrake.setEnabled(!this.paused);
@@ -142,6 +158,10 @@ export class Game {
 
   onSessionPhase(listener: (phase: SessionPhase) => void): void {
     this.phaseListeners.push(listener);
+  }
+
+  onGearChange(listener: (gear: number) => void): void {
+    this.gearListeners.push(listener);
   }
 
   // ---------------------------------------------------------------- world / drawings
@@ -183,13 +203,15 @@ export class Game {
     let manual = 0;
     let held = false;
     let braking = false;
+    let speedMultiplier = 1;
     if (this.driving) {
       this.input.update(dtMs);
-      // During the ending the child's steering and brake are ignored; the horn still works.
+      // During the ending driving inputs are ignored; the horn still works.
       if (!ending) {
         manual = this.input.getSteering();
         held = this.input.isHeldActive();
         braking = this.input.isBraking();
+        speedMultiplier = this.input.getSpeedMultiplier();
       }
     }
     if (braking && !this.wasBraking) {
@@ -218,7 +240,10 @@ export class Game {
     this.mixedSteer = this.mixer.update(manual, this.autoSteer, now, dtMs, held);
     if (this.mixer.getLastActivityMs() !== before) this.metrics.markInput();
 
-    this.vehicle.update(dt, this.mixedSteer, braking);
+    this.vehicle.update(dt, this.mixedSteer, braking, speedMultiplier);
+    if (this.driving && !ending) {
+      this.input.gamepad.haptics.roadEdge(now, roadEdgeStrength(state.lateralOffset, manual, state.speed));
+    }
 
     // Place the bus on the road.
     const frame = this.world.road.frame(state.progress);
@@ -231,13 +256,15 @@ export class Game {
     this.traffic.update(dt, this.timeSec, { s: state.progress, d: state.lateralOffset });
     this.sprites.update(dt, state.progress, state.lateralOffset);
     this.cameraRig.update(dt, state.progress, state.lateralOffset, this.mixedSteer);
-    this.audio.update(dt, this.mixedSteer, state.speed / CONFIG.driving.speed, this.driving);
+    this.audio.update(dt, this.mixedSteer, state.speed / CONFIG.driving.speed, this.driving,
+      braking ? 1 : speedMultiplier, this.vehicle.gearbox.getRatios().rpm);
     if (this.driving) this.metrics.tick(dtMs, this.mixer.getMode(), this.loop.getFps());
   }
 
   private onPhaseChange(phase: SessionPhase): void {
     this.lastPhase = phase;
     if (phase === 'ending') {
+      this.input.gamepad.haptics.stop();
       this.mixer.setForcedAutopilot(true);
       this.input.touchBrake.setEnabled(false);
     }
@@ -265,8 +292,17 @@ export class Game {
       devicePixelRatio: window.devicePixelRatio,
       inputSource: this.input.getSource(),
       gamepadId: pad?.id ?? '(none)',
+      haptics: this.input.gamepad.haptics.getStatus(),
+      gear: `${this.vehicle.gearbox.getGear()} / 5 (cruise ${(this.vehicle.getCruisingSpeed() * 3.6).toFixed(1)} km/h)`,
       steeringAxis: cal && pad && cal.gamepadId === pad.id ? `${cal.steeringAxis}${cal.invertAxis ? ' (inv)' : ''}` : `${CONFIG.gamepad.defaultAxis} (default)`,
       rawSteering: this.input.gamepad.getRaw(),
+      gamepadAxes: pad ? pad.axes.map((value, axis) => `${axis}:${value.toFixed(3)}`).join(' ') : '(none)',
+      pedalBrake: cal?.brake && pad?.id === cal.gamepadId
+        ? `axis ${cal.brake.axis}: ${Math.round(this.input.gamepad.getBrake() * 100)}%`
+        : '(not calibrated)',
+      pedalThrottle: cal?.throttle && pad?.id === cal.gamepadId
+        ? `axis ${cal.throttle.axis}: ${Math.round(this.input.gamepad.getThrottle() * 100)}%`
+        : '(not calibrated)',
       normalizedSteering: this.input.getSteering(),
       tilt: !tilt.isEnabled() ? 'off' : tilt.hasSignal() ? `${tilt.getRelativeAngle().toFixed(1)}° → ${tilt.getSteering().toFixed(2)}` : 'no signal',
       speedKmh: this.vehicle.state.speed * 3.6,
