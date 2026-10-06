@@ -32,6 +32,7 @@ export const winter: WorldPreset = {
     ],
   },
   snowfall: { count: 240, speed: 1.5 },
+  santaSleigh: { altitude: 34, intervalSec: [25, 40] },
   traffic: { enabled: true, vehicles: ['snowplow', 'skiPickup', 'car', 'van'] },
   audio: { engineBaseHz: 48, ambience: { noiseLevel: 0.025, noiseCutoff: 420, events: ['chirp'], eventInterval: [7, 13] } },
 };
