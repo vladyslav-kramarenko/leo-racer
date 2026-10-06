@@ -212,7 +212,7 @@ export class ParentMenu {
         {},
         h('h3', {}, 'World'),
         worlds,
-        h('p', { class: 'hint' }, 'Tap a world to switch. The game restarts with the START button.'),
+      h('p', { class: 'hint' }, 'Tap a world to switch and start driving there.'),
       ),
       h(
         'section',

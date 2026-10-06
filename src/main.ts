@@ -16,6 +16,8 @@ import { TouchBrakeIndicator } from './ui/TouchBrakeIndicator';
 import { createWheelSetupScreen } from './ui/WheelSetup';
 import { getPreset, listPresets } from './world/presets';
 
+const WORLD_RESUME_KEY = 'leo.resumeWorld';
+
 function showFatal(root: HTMLElement, message: string): void {
   root.innerHTML = '';
   const box = document.createElement('div');
@@ -29,6 +31,11 @@ async function main(): Promise<void> {
   const params = new URLSearchParams(location.search);
   let settings = loadSettings();
   const preset = getPreset(settings.worldId);
+  let resumeWorld = false;
+  try {
+    resumeWorld = sessionStorage.getItem(WORLD_RESUME_KEY) === preset.id;
+    sessionStorage.removeItem(WORLD_RESUME_KEY);
+  } catch { /* Storage may be unavailable. */ }
   const audio = new AudioManager();
   audio.setEnabled(settings.soundOn);
 
@@ -102,9 +109,12 @@ async function main(): Promise<void> {
       userAgent: navigator.userAgent,
     });
 
-  const selectWorld = (id: string) => {
+  const selectWorld = (id: string, resume = false) => {
     if (id === preset.id) return;
     settings = saveSettings({ worldId: id });
+    if (resume) {
+      try { sessionStorage.setItem(WORLD_RESUME_KEY, id); } catch { /* Keep world selection available. */ }
+    }
     // Reload to rebuild the world with the selected preset.
     location.reload();
   };
@@ -140,7 +150,7 @@ async function main(): Promise<void> {
       },
       worlds: () => listPresets().map((p) => ({ id: p.id, name: p.name, thumbnail: p.thumbnail })),
       currentWorld: () => preset.id,
-      selectWorld,
+      selectWorld: (id) => selectWorld(id, true),
       drawingCount: () => drawings.list().length,
       playTimeMinutes: () => settings.playTimeMinutes,
       setPlayTimeMinutes: (minutes) => {
@@ -182,17 +192,33 @@ async function main(): Promise<void> {
   );
   menu.mount(root);
 
-  const start = new StartScreen((fullscreen) => {
+  const startDriving = (fullscreen: boolean) => {
     if (fullscreen) void toggleFullscreen();
     audio.start(preset.audio);
     // Must run inside the click: iOS only grants motion permission from a user gesture.
     if (wantsTilt()) void enableTilt();
     game.startDriving();
-    start.hide();
     // Parent gestures only once driving started, so the start screen stays simple.
     new ParentGesture(menu).attach(root);
-  }, { worlds: listPresets(), currentId: preset.id, onSelect: selectWorld });
-  start.mount(root);
+  };
+  if (resumeWorld) {
+    startDriving(false);
+    // Reload can suspend Web Audio; the next normal input unlocks it without a menu.
+    const unlockAudio = () => {
+      audio.start(preset.audio);
+      if (wantsTilt()) void enableTilt();
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+    window.addEventListener('pointerdown', unlockAudio);
+    window.addEventListener('keydown', unlockAudio);
+  } else {
+    const start = new StartScreen((fullscreen) => {
+      startDriving(fullscreen);
+      start.hide();
+    }, { worlds: listPresets(), currentId: preset.id, onSelect: selectWorld });
+    start.mount(root);
+  }
 
   if (import.meta.env.DEV) {
     (window as unknown as { __leo: unknown }).__leo = {

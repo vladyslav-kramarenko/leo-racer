@@ -63,6 +63,24 @@ test('page loads with the start screen', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('parent world selection resumes driving while entrance selection keeps the start screen', async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors = trackErrors(page);
+  await page.goto('/');
+  await Promise.all([page.waitForEvent('load'), page.getByTestId('world-farm').click({ noWaitAfter: true })]);
+  await expect(page.getByTestId('start-button')).toBeVisible();
+  await page.getByTestId('start-button').click();
+  await openParentMenu(page);
+  await Promise.all([page.waitForEvent('load'), page.getByTestId('world-nature').click({ noWaitAfter: true })]);
+  await expect.poll(async () => (await state(page)).driving).toBe(true);
+  expect((await state(page)).world).toBe('nature');
+  await expect(page.getByTestId('start-screen')).toBeHidden();
+  await openParentMenu(page);
+  await page.reload();
+  await expect(page.getByTestId('start-button')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('saved wheel can calibrate its brake pedal and brake after reload', async ({ page }) => {
   test.setTimeout(180_000);
   await page.setViewportSize({ width: 640, height: 360 });
