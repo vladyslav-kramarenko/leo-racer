@@ -36,6 +36,7 @@ Leo Racer is a browser driving toy for children aged 2–4.
   - Tablet tilt steering.
   - A big touch brake zone at the bottom of the screen.
 - **Manual ↔ autopilot:** any steering takes over instantly. Autopilot blends back in after 8 s idle. There are no visible modes.
+- **Haptic feedback:** on controllers exposing browser vibration, a short impulse marks a traffic overlap and gentle repeated pulses mark outward steering at the road boundary. Wheel torque effects require a native bridge; the browser feature is rumble only. Wheel setup has **Test vibration**, and Diagnostics shows its availability.
 - **Built-in traffic:** cars, trucks, tractors and buses drive in their lanes and make way for the school bus. Parents set the density: Off, Low, Normal or Busy.
   - **Police:** a police SUV with a red/blue light bar flashing at 1.5 Hz (below the 3 Hz photosensitivity limit) drives in Nature and City.
   - **Sports car:** an 80s wedge supercar zooms past the bus on the Nature highway and drives calmly in City.
@@ -49,10 +50,23 @@ Leo Racer is a browser driving toy for children aged 2–4.
 
 ## Controls
 
+Hold `↑` / `W` for **3× cruising speed**. The calibrated accelerator pedal varies the multiplier linearly from **1.5× to 3×** over its active travel (the first 10% ignores jitter). Pressing the accelerator produces a distinct rising engine sound. Release to return smoothly to normal speed. Braking takes priority. Configure pedals in Parent Menu → Calibrate Wheel → Calibrate brake pedal / Calibrate accelerator pedal.
+
+The wheel can shift through five forward gears. Defaults are button 5 for up and button 4 for down (Gamepad API indices); use **Calibrate Wheel → Assign gear buttons** to bind your paddles or sequential shifter. A press shifts once, holding does not repeat, and shift buttons do not honk. Gear 3 is the default and preserves the original cruise speed. Gas multiplies the selected gear's base speed; braking still takes priority.
+
+| Gear | Base speed multiplier | Engine pitch multiplier |
+| --- | --- | --- |
+| 1 | 0.65 | 1.45 |
+| 2 | 0.85 | 1.20 |
+| 3 | 1.00 | 1.00 |
+| 4 | 1.20 | 0.84 |
+| 5 | 1.45 | 0.72 |
+
 | Who    | Action                         | Keyboard            | Wheel / gamepad   | Tablet                          |
 | ------ | ------------------------------ | ------------------- | ----------------- | ------------------------------- |
 | Child  | Steer                          | `←` `→` / `A` `D`   | Steering axis     | Tilt the tablet like a wheel    |
-| Child  | Brake (hold; release to go on) | `↓` / `S`           | —                 | Press the bottom of the screen  |
+| Child  | Brake (hold; release to go on) | `↓` / `S`           | Calibrated brake pedal | Press the bottom of the screen  |
+| Child  | Speed boost (hold)            | `↑` / `W`: 3×       | Accelerator: 1.5×–3× | —                               |
 | Child  | Horn                           | `Space` / `H`       | Any button        | —                               |
 | Parent | Parent Menu                    | Hold `Esc` 2 s      | —                 | Long-press the top-left corner  |
 
