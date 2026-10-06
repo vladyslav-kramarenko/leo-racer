@@ -28,13 +28,21 @@ describe('Farm harvest tractor ride', () => {
   });
 
   it('keeps the tractor and all three wagons off the road, follows turns, and joins the hitches', () => {
-    const props = new ObjectSpawner(road, preset.props, 1);
+    const props = new ObjectSpawner(road, {
+      ...preset.props, perChunk: [0, 0], shoulderCones: 0,
+      items: preset.props.items.filter((spec) => spec.kind === 'harvestRide'),
+    }, 1);
     const ride = (props as unknown as { pools: Map<string, TestPool> }).pools.get('harvestRide')!;
     const matrix = new THREE.Matrix4();
     const position = new THREE.Vector3();
     const next = new THREE.Vector3();
     const forward = new THREE.Vector3();
     const vehicles = [0, 1, 3, 5];
+    const bounds = vehicles.map((index) => {
+      const geometry = ride.parts[index].mesh.geometry;
+      geometry.computeBoundingBox();
+      return geometry.boundingBox!;
+    });
     for (const chunk of [3, 9, 15, 45]) {
       props.populate(0, chunk);
       expect(ride.active[0]).toBe(true);
@@ -46,9 +54,7 @@ describe('Farm harvest tractor ride', () => {
         });
         for (let i = 0; i < vehicles.length; i++) {
           const mesh = ride.parts[vehicles[i]].mesh;
-          mesh.geometry.computeBoundingBox();
-          const bounds = mesh.geometry.boundingBox!;
-          for (const x of [bounds.min.x, bounds.max.x]) for (const z of [bounds.min.z, bounds.max.z]) {
+          for (const x of [bounds[i].min.x, bounds[i].max.x]) for (const z of [bounds[i].min.z, bounds[i].max.z]) {
             position.set(x, 0, z).applyMatrix4(poses[i]);
             const lateral = (position.x - road.centerX(-position.z)) / Math.hypot(1, road.slope(-position.z));
             expect(lateral).toBeGreaterThan(6.5);
