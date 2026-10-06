@@ -3,6 +3,7 @@ import { CONFIG } from '../game/config';
 import { ChunkManager } from './ChunkManager';
 import { Guideway } from './Guideway';
 import { FreightRailway } from './FreightRailway';
+import { applyGroundCutouts } from './groundCutouts';
 import { box, buildColoredGeometry, cone, makeCanvas, rbox } from './geometry';
 import { ObjectSpawner } from './ObjectSpawner';
 import type { HillsPreset, SkylinePreset, SkyPreset, TerrainPreset, WorldPreset } from './presets/types';
@@ -58,6 +59,7 @@ export class WorldManager {
 
     this.chunks = new ChunkManager(this.road, preset.road, preset.terrain.bands);
     this.props = new ObjectSpawner(this.road, preset.props, this.chunks.poolSize);
+    applyGroundCutouts(this.terrain.material as THREE.MeshLambertMaterial, this.props.groundCutouts, this.props.groundCutoutRotations);
     this.chunks.onChunkAssigned((slot, index) => this.props.populate(slot, index));
     this.guideway = preset.guideway ? new Guideway(this.road, preset.guideway, this.chunks.poolSize) : null;
     if (this.guideway) {

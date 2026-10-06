@@ -3,7 +3,7 @@ import type { PropModel } from './props';
 
 /** A roadside quarry floor, stepped rock face and a purpose-built giant haul truck. */
 export function quarry(): PropModel {
-  const parts: ColoredPart[] = [];
+  let parts: ColoredPart[] = [];
   const addBox = (w: number, h: number, d: number, color: string, x: number, y: number, z: number) => {
     parts.push({ geometry: rbox(w, h, d, 0.2), color, position: [x, y, z] });
   };
@@ -20,6 +20,8 @@ export function quarry(): PropModel {
     parts.push({ geometry: ico(1.6 + (i % 3) * 0.5), color: i % 2 ? '#9e8d79' : '#c3b4a0',
       position: [15 + (i % 5) * 2.6, 1, 2 + Math.floor(i / 5) * 3], scale: [1, 0.7, 1] });
   }
+  const scenery = buildColoredGeometry(parts);
+  parts = [];
   // Truck front is -Z, facing the passing driver. Overall height ~8 m.
   addBox(8, 1, 12, '#34383e', -5, 2.6, 2);
   for (const x of [-9, -1]) {
@@ -48,5 +50,11 @@ export function quarry(): PropModel {
   // Access ladder makes the oversized cab easy to read at a glance.
   for (const x of [-8.1, -6.5]) addBox(0.12, 3.2, 0.15, '#e9edf0', x, 2.8, -4.85);
   for (let i = 0; i < 6; i++) addBox(1.7, 0.12, 0.2, '#e9edf0', -7.3, 1.4 + i * 0.5, -4.9);
-  return { body: buildColoredGeometry(parts) };
+  const pivot: [number, number, number] = [-5, 0, 2];
+  const truck = buildColoredGeometry(parts);
+  truck.translate(-pivot[0], -pivot[1], -pivot[2]);
+  return {
+    body: scenery,
+    parts: [{ geometry: truck, pivot, anim: { type: 'maneuver', radius: 4.5, angle: Math.PI / 3, period: 40 } }],
+  };
 }

@@ -3,6 +3,7 @@ import { box, buildColoredGeometry, cone, cyl, dome, extrudeProfile, ico, prism,
 import type { PropKind } from './presets/types';
 import { carParts, dumpTruckParts, tractorParts, TOY } from './toyParts';
 import { quarry } from './quarry';
+import { pipeTrench } from './pipeTrench';
 
 /**
  * Low-poly, toy-like prop library. All models are original, built from primitives:
@@ -28,7 +29,9 @@ export type PartAnim =
    */
   | { type: 'slide'; vector: [number, number, number]; period: number }
   /** Glides smoothly from the pivot to pivot + `vector` and back over `period` seconds (lifts, hoists). */
-  | { type: 'shuttle'; vector: [number, number, number]; period: number };
+  | { type: 'shuttle'; vector: [number, number, number]; period: number }
+  /** Slowly drives forwards and backs along a circular arc, turning with the path. */
+  | { type: 'maneuver'; radius: number; angle: number; period: number };
 
 export interface PartModel {
   /** Geometry in part-local space (pivot at the origin). */
@@ -44,6 +47,8 @@ export interface PropModel {
   parts?: PartModel[];
   /** Per-instance colour tints (multiplied with the vertex colours). */
   tints?: string[];
+  /** Rectangular excavation footprint in model-local X/Z; disappears when the instance recycles. */
+  groundCutout?: { center: [number, number]; size: [number, number] };
 }
 
 const { YELLOW, DARK, ORANGE, WHITE, GLASS } = TOY;
@@ -965,6 +970,7 @@ const BUILDERS: Record<PropKind, () => PropModel> = {
   excavator,
   dumpTruck,
   quarry,
+  pipeTrench,
   crane,
   unfinishedBuilding,
   pine,

@@ -106,3 +106,7 @@ On the wheel, the first six buttons not assigned to either gear set play sounds 
 Nature has a ground-level railway on the forest side. A steam locomotive, coal tender, five loaded ore wagons and red caboose pass in alternating directions. Check the first approaching train soon after entering Nature, then a following train after another 14–24 seconds between trains. Wheels, connecting rods and chimney steam should animate; opening the parent menu pauses them. Track and cars should follow the road curves and remain clear of rocks, trees and the driving corridor.
 
 The models are a fictional early twentieth-century BC freight train, inspired by the region's railway and mining history. Historical references: [Railway Museum of BC's 1910 PGE steam locomotive](https://www.wcra.org/exhibit/pacific-great-eastern-2-6-2st/) and [Britannia Mine Museum's historical FAQs](https://www.britanniaminemuseum.ca/pages/historical-faqs). This is a visual homage rather than a reconstruction of Britannia's ore transportation route.
+
+## Construction pipe installation
+
+An excavation site appears on the left around 120–160 m into Construction, then every 320 m. Check that the blue main sits below ground, with soil walls, timber shoring and an open working end under the excavator bucket. Spare pipes, spoil piles and red/white guards sit outside the trench. Drive past several sites: recycled chunks must restore the ground without leaving holes in unrelated places. Other roadside machinery should not spawn in the excavation.

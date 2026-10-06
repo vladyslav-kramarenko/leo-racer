@@ -9,6 +9,7 @@ export type PropKind =
   | 'barrier'
   | 'concreteBlock'
   | 'pipes'
+  | 'pipeTrench'
   | 'sign'
   | 'excavator'
   | 'dumpTruck'

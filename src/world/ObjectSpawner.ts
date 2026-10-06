@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CONFIG } from '../game/config';
-import { buildPropModel, type PartAnim } from './props';
+import { buildPropModel, type PartAnim, type PropModel } from './props';
 import type { PropKind, PropSpec, PropsPreset } from './presets/types';
 import { createRng, hashInt, randRange } from './random';
 import type { RoadGenerator } from './RoadGenerator';
@@ -20,6 +20,7 @@ interface PropPool {
   /** Placed instance matrices (needed to drive animated parts). */
   base: THREE.Matrix4[];
   active: boolean[];
+  cutout?: { offset: number; footprint: NonNullable<PropModel['groundCutout']> };
 }
 
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -32,6 +33,8 @@ const EDGE = CONFIG.road.halfWidth + CONFIG.road.shoulderWidth;
  */
 export class ObjectSpawner {
   readonly group = new THREE.Group();
+  readonly groundCutouts: THREE.Vector4[] = [];
+  readonly groundCutoutRotations: THREE.Vector2[] = [];
   private readonly pools = new Map<PropKind, PropPool>();
   private readonly lit = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   private readonly unlit = new THREE.MeshBasicMaterial({ vertexColors: true });
@@ -62,6 +65,13 @@ export class ObjectSpawner {
     for (const [kind, perSlot] of kinds) {
       const model = buildPropModel(kind);
       const capacity = perSlot * slots;
+      const cutout = model.groundCutout ? { offset: this.groundCutouts.length, footprint: model.groundCutout } : undefined;
+      if (cutout) {
+        for (let i = 0; i < capacity; i++) {
+          this.groundCutouts.push(new THREE.Vector4());
+          this.groundCutoutRotations.push(new THREE.Vector2(1, 0));
+        }
+      }
       const mesh = this.instanced(model.body, this.lit, capacity);
       const parts = (model.parts ?? []).map((p) => ({
         mesh: this.instanced(p.geometry, p.unlit ? this.unlit : this.lit, capacity),
@@ -78,6 +88,7 @@ export class ObjectSpawner {
         tints,
         base: Array.from({ length: capacity }, () => new THREE.Matrix4()),
         active: new Array(capacity).fill(false),
+        cutout,
       });
     }
     this.randomItems = preset.items.filter((i) => !i.every);
@@ -103,6 +114,7 @@ export class ObjectSpawner {
         const idx = slot * pool.perSlot + i;
         pool.mesh.setMatrixAt(idx, ZERO);
         pool.active[idx] = false;
+        if (pool.cutout) this.groundCutouts[pool.cutout.offset + idx].set(0, 0, 0, 0);
         for (const part of pool.parts) part.mesh.setMatrixAt(idx, ZERO);
       }
     }
@@ -133,6 +145,16 @@ export class ObjectSpawner {
       const s = s0 + rng() * L;
       const d = side * (EDGE + randRange(rng, spec.minDistance, spec.maxDistance));
       const scale = randRange(rng, spec.scale[0], spec.scale[1]);
+      const point = this.road.point(s, d);
+      // Keep random machinery and supplies out of the open excavation and its work area.
+      if (this.groundCutouts.some((hole, index) => {
+        if (hole.z === 0) return false;
+        const rotation = this.groundCutoutRotations[index];
+        const dx = point.x - hole.x;
+        const dz = point.z - hole.y;
+        return Math.abs(dx * rotation.x - dz * rotation.y) < hole.z + 7
+          && Math.abs(dx * rotation.y + dz * rotation.x) < hole.w + 5;
+      })) continue;
       this.place(slot, used, spec.kind, s, d, scale, this.yawFor(spec.facing, s, side, rng), rng);
     }
 
@@ -185,6 +207,17 @@ export class ObjectSpawner {
           part.pivot.x + a.vector[0] * k,
           part.pivot.y + a.vector[1] * k,
           part.pivot.z + a.vector[2] * k,
+        );
+        this.m.multiplyMatrices(base, this.m2);
+        return;
+      }
+      case 'maneuver': {
+        const turn = a.angle * Math.sin((2 * Math.PI * t) / a.period + phase);
+        this.m2.makeRotationY(-turn);
+        this.m2.setPosition(
+          part.pivot.x + a.radius * (1 - Math.cos(turn)),
+          part.pivot.y,
+          part.pivot.z - a.radius * Math.sin(turn),
         );
         this.m.multiplyMatrices(base, this.m2);
         return;
@@ -273,6 +306,15 @@ export class ObjectSpawner {
     pool.base[idx].compose(this.v, this.q, this.sc);
     pool.mesh.setMatrixAt(idx, pool.base[idx]);
     pool.active[idx] = true;
+    if (pool.cutout) {
+      const { center, size } = pool.cutout.footprint;
+      const cos = Math.cos(yaw);
+      const sin = Math.sin(yaw);
+      const hole = pool.cutout.offset + idx;
+      this.groundCutouts[hole].set(p.x + scale * (cos * center[0] + sin * center[1]),
+        p.z + scale * (-sin * center[0] + cos * center[1]), size[0] * scale / 2, size[1] * scale / 2);
+      this.groundCutoutRotations[hole].set(cos, sin);
+    }
     if (pool.tints) pool.mesh.setColorAt(idx, pool.tints[Math.floor(rng() * pool.tints.length)]);
   }
 }
