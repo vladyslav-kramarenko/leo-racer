@@ -65,7 +65,7 @@ export function harvestRide(): PropModel {
   const pose = { x: 0, z: 0, yaw: 0 };
   for (let i = 0; i <= 96; i++) {
     circuitPose(i / 96 * length, RADIUS, HALF_STRAIGHT, pose);
-    for (const offset of [-1.9, 1.9]) positions.push(pose.x + Math.cos(pose.yaw) * offset, 0.07,
+    for (const offset of [-1.9, 1.9]) positions.push(pose.x + Math.cos(pose.yaw) * offset, 0.18,
       pose.z - Math.sin(pose.yaw) * offset);
     if (i < 96) {
       const n = i * 2;
@@ -91,7 +91,7 @@ export function harvestRide(): PropModel {
     color: ['#df7041', '#efc454', '#4e9b8a'][i % 3], position: [-3.4 + i * 0.85, 3.12, 0], rotation: [Math.PI / 2, 0, Math.PI] });
 
   const animated = (parts: ColoredPart[], behind: number, towTo?: number): PartModel => ({
-    geometry: buildColoredGeometry(parts), pivot: [0, towTo === undefined ? 0.09 : 0.74, 0],
+    geometry: buildColoredGeometry(parts), pivot: [0, towTo === undefined ? 0.2 : 0.85, 0],
     anim: { type: 'circuit', radius: RADIUS, halfStraight: HALF_STRAIGHT, period: PERIOD, behind, towTo } satisfies PartAnim,
   });
   const tractor = tractorParts().filter((p) => p.color !== TOY.GLASS_DARK);
