@@ -19,6 +19,40 @@ Open the Parent Menu (hold `Esc` for 2 s) → Diagnostics → Overlay: **Shown**
 | 9 | Disconnect does not crash | Unplug while driving. The bus keeps driving on autopilot | ☐ |
 | 10 | Reconnect works | Plug back in and turn. Steering works again with the saved calibration | ☐ |
 
+## Wheel gears
+
+- **Calibrate Wheel → Assign gear buttons**: press gear up, release, then press a different button for gear down. The bindings must persist after reload and steering/pedal recalibration.
+- Defaults are Gamepad API button indices 5 (up) and 4 (down). Reserved shift buttons must not honk; other wheel buttons still honk.
+- Each press changes one gear; holding, reconnecting with a button held, or pressing both shift buttons together must not repeatedly shift.
+- A new session starts in gear 3. Repeated downshifts stop at gear 1; repeated upshifts stop at gear 5.
+- Base speed factors are 0.65 / 0.85 / 1 / 1.2 / 1.45. Engine pitch factors are 1.45 / 1.2 / 1 / 0.84 / 0.72. Speed changes smoothly, and an upshift audibly lowers the engine tone.
+- Gas applies 1.5×–3× to the selected base speed. Brake must still stop the bus; shifts during the session ending must not change gear or prevent stopping.
+- Diagnostics shows the current gear and its unboosted cruising speed.
+
+## Browser haptic feedback
+
+- Diagnostics → **vibration** reports `available`, `unsupported`, or `unavailable` (the actuator rejected an effect).
+- In **Calibrate Wheel**, use **Test vibration** for one short impulse.
+- If supported, touching traffic or a moving drawing in a road lane produces a short impulse. Ordinary despawning must not.
+- While driving, steer outward at either road boundary: gentle pulses repeat and grow towards the hard boundary. Steering inward, driving near the centre, or standing still must not trigger road pulses.
+- Opening Parent Menu, changing tab, losing focus, finishing a session, or disconnecting the wheel must stop the feedback. Returning to the game must allow feedback again.
+- This uses Gamepad API `dual-rumble`. It does not implement directional wheel torque. A force-feedback wheel whose driver exposes no browser vibration needs a native Windows bridge.
+
+## Wheel pedals
+
+- Hold `Esc` for 2 seconds, open **Calibrate Wheel**, and calibrate steering with both pedals released.
+- In the pedal step, release both pedals and click **Pedals released — Next**. Fully press only the brake, hold it, and click **Save brake pedal**.
+- Check the live brake percentage: released = 0%, fully pressed = 100%. Pressing only the accelerator must not brake.
+- Use **Calibrate accelerator pedal**, release both pedals, continue, then hold only the accelerator fully pressed and save it. Released = 0%, fully pressed = 100%.
+- In game, the accelerator varies speed linearly from 1.5× at the start of active travel to 3× at full press. The first 10% ignores jitter; released = normal speed. Holding `↑` / `W` requests 3× regardless of pedal position. Release to return to normal cruising speed. Holding the brake must stop the bus even while accelerating; releasing both must resume normal driving.
+- Pressing gas or `↑` / `W` must produce an immediate, distinct rising engine sound. Stronger pedal pressure makes it louder and higher; releasing fades it out. Mute and the session ending must still silence it.
+- Holding the accelerator during the session ending must not prevent the bus from stopping.
+- Test disconnecting while braking: pedal braking must release. Reconnect the same wheel and check that the saved calibration still works.
+- Test both separate and combined pedal modes. Recalibrate after changing driver mode.
+- Diagnostics shows **all axes** and **brake pedal**. If Windows sees a pedal but no browser axis changes, check the driver/device mode; calibration requires an axis exposed to the browser.
+- Existing steering-only calibrations remain valid. Use **Calibrate brake pedal** after wheel calibration to add or update the pedal.
+- Saved pedal calibration is the default for the same wheel after reload. Recalibrating steering must preserve both pedals. **Reset calibration** explicitly clears the saved default.
+
 ## Tablet (tilt + touch brake)
 
 | # | Check | How | Pass |
