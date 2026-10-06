@@ -2,10 +2,11 @@ import { city } from './city';
 import { construction } from './construction';
 import { farm } from './farm';
 import { nature } from './nature';
+import { seaToSky } from './seaToSky';
 import type { WorldPreset } from './types';
 
 const PRESETS: Record<string, WorldPreset> = Object.fromEntries(
-  [construction, nature, farm, city].map((p) => [p.id, p]),
+  [construction, seaToSky, nature, farm, city].map((p) => [p.id, p]),
 );
 
 export const DEFAULT_WORLD_ID = construction.id;

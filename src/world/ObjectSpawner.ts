@@ -21,6 +21,7 @@ interface PropPool {
   base: THREE.Matrix4[];
   active: boolean[];
   cutout?: { offset: number; footprint: NonNullable<PropModel['groundCutout']> };
+  exclusion?: { offset: number; size: [number, number] };
 }
 
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -35,6 +36,7 @@ export class ObjectSpawner {
   readonly group = new THREE.Group();
   readonly groundCutouts: THREE.Vector4[] = [];
   readonly groundCutoutRotations: THREE.Vector2[] = [];
+  private readonly exclusionAreas: { bounds: THREE.Vector4; rotation: THREE.Vector2 }[] = [];
   private readonly pools = new Map<PropKind, PropPool>();
   private readonly lit = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   private readonly unlit = new THREE.MeshBasicMaterial({ vertexColors: true });
@@ -66,6 +68,10 @@ export class ObjectSpawner {
       const model = buildPropModel(kind);
       const capacity = perSlot * slots;
       const cutout = model.groundCutout ? { offset: this.groundCutouts.length, footprint: model.groundCutout } : undefined;
+      const exclusion = model.placementExclusion ? { offset: this.exclusionAreas.length, size: model.placementExclusion } : undefined;
+      if (exclusion) {
+        for (let i = 0; i < capacity; i++) this.exclusionAreas.push({ bounds: new THREE.Vector4(), rotation: new THREE.Vector2(1, 0) });
+      }
       if (cutout) {
         for (let i = 0; i < capacity; i++) {
           this.groundCutouts.push(new THREE.Vector4());
@@ -89,6 +95,7 @@ export class ObjectSpawner {
         base: Array.from({ length: capacity }, () => new THREE.Matrix4()),
         active: new Array(capacity).fill(false),
         cutout,
+        exclusion,
       });
     }
     this.randomItems = preset.items.filter((i) => !i.every);
@@ -115,6 +122,7 @@ export class ObjectSpawner {
         pool.mesh.setMatrixAt(idx, ZERO);
         pool.active[idx] = false;
         if (pool.cutout) this.groundCutouts[pool.cutout.offset + idx].set(0, 0, 0, 0);
+        if (pool.exclusion) this.exclusionAreas[pool.exclusion.offset + idx].bounds.set(0, 0, 0, 0);
         for (const part of pool.parts) part.mesh.setMatrixAt(idx, ZERO);
       }
     }
@@ -134,7 +142,7 @@ export class ObjectSpawner {
       if ((((chunkIndex - offset) % chunks) + chunks) % chunks !== 0) continue;
       const side = pickSide(spec, rng);
       const s = s0 + L * (0.4 + rng() * 0.2);
-      const d = side * (EDGE + randRange(rng, spec.minDistance, spec.maxDistance));
+      const d = spec.roadCentered ? 0 : side * (EDGE + randRange(rng, spec.minDistance, spec.maxDistance));
       this.place(slot, used, spec.kind, s, d, randRange(rng, spec.scale[0], spec.scale[1]), this.yawFor(spec.facing, s, side, rng), rng);
     }
 
@@ -146,6 +154,12 @@ export class ObjectSpawner {
       const d = side * (EDGE + randRange(rng, spec.minDistance, spec.maxDistance));
       const scale = randRange(rng, spec.scale[0], spec.scale[1]);
       const point = this.road.point(s, d);
+      if (this.exclusionAreas.some(({ bounds, rotation }) => {
+        const dx = point.x - bounds.x;
+        const dz = point.z - bounds.y;
+        return bounds.z > 0 && Math.abs(dx * rotation.x - dz * rotation.y) < bounds.z
+          && Math.abs(dx * rotation.y + dz * rotation.x) < bounds.w;
+      })) continue;
       // Keep random machinery and supplies out of the open excavation and its work area.
       if (this.groundCutouts.some((hole, index) => {
         if (hole.z === 0) return false;
@@ -219,6 +233,15 @@ export class ObjectSpawner {
           part.pivot.y,
           part.pivot.z - a.radius * Math.sin(turn),
         );
+        this.m.multiplyMatrices(base, this.m2);
+        return;
+      }
+      case 'crossing': {
+        const cycle = (2 * Math.PI * t) / a.period + phase;
+        const k = 0.5 - 0.5 * Math.cos(cycle);
+        // Turn gradually while slowing at the ends instead of flipping instantly.
+        this.m2.makeRotationY(-Math.PI / 2 * Math.tanh(Math.sin(cycle) * 6));
+        this.m2.setPosition(part.pivot.x + a.span * k, part.pivot.y, part.pivot.z);
         this.m.multiplyMatrices(base, this.m2);
         return;
       }
@@ -306,6 +329,11 @@ export class ObjectSpawner {
     pool.base[idx].compose(this.v, this.q, this.sc);
     pool.mesh.setMatrixAt(idx, pool.base[idx]);
     pool.active[idx] = true;
+    if (pool.exclusion) {
+      const area = this.exclusionAreas[pool.exclusion.offset + idx];
+      area.bounds.set(p.x, p.z, pool.exclusion.size[0] * scale / 2, pool.exclusion.size[1] * scale / 2);
+      area.rotation.set(Math.cos(yaw), Math.sin(yaw));
+    }
     if (pool.cutout) {
       const { center, size } = pool.cutout.footprint;
       const cos = Math.cos(yaw);

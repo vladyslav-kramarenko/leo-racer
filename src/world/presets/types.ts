@@ -27,6 +27,12 @@ export type PropKind =
   | 'viewpoint'
   | 'sailboat'
   | 'gondola'
+  | 'elk'
+  | 'moose'
+  | 'bear'
+  | 'bighorn'
+  | 'wolf'
+  | 'wildlifeBridge'
   // Farm
   | 'fence'
   | 'barn'
@@ -66,6 +72,8 @@ export interface PropSpec {
   facing?: 'road' | 'traffic' | 'away' | 'random';
   /** Which side of the road the prop may appear on (default both). */
   side?: Side;
+  /** A bridge centered over the road; its model must provide vehicle clearance. */
+  roadCentered?: boolean;
   /**
    * Landmarks: instead of a random pick, place exactly one in every `chunks`-th road chunk
    * (chunk index ≡ offset mod chunks), so a big landmark shows up now and then, not everywhere.

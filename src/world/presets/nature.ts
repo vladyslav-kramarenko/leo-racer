@@ -1,74 +1,38 @@
 import type { WorldPreset } from './types';
 
-/** Coastal mountain road: sea on the left, forest and snowy mountains on the right. */
+/** A Banff-inspired forest road with wildlife overpasses in the Canadian Rockies. */
 export const nature: WorldPreset = {
   id: 'nature',
   name: 'Nature',
-  thumbnail: '/worlds/nature.jpg',
+  thumbnail: '/worlds/nature-forest.jpg',
   sky: {
-    top: '#4f9fe8',
-    horizon: '#dcefff',
-    fogColor: '#d3e7f5',
-    fogNear: 70,
-    fogFar: 230,
-    sunColor: '#fff6e0',
-    sunIntensity: 2.1,
-    hemiSky: '#d4ecff',
-    hemiGround: '#5d7a45',
-    hemiIntensity: 1.35,
-    hills: {
-      colors: ['#5c7f63', '#6b8f6a', '#4f7058', '#7a9a83'],
-      height: [34, 66],
-      width: [40, 70],
-      snowCap: '#f4f8fb',
-    },
+    top: '#579bdb', horizon: '#e2edf3', fogColor: '#d7e5e8', fogNear: 75, fogFar: 240,
+    sunColor: '#fff1d5', sunIntensity: 2, hemiSky: '#d8eaff', hemiGround: '#45653c', hemiIntensity: 1.45,
+    hills: { colors: ['#6b7d80', '#819496', '#596f77', '#9ba7a6'], height: [48, 86], width: [35, 62], snowCap: '#faf9f4' },
   },
-  terrain: {
-    base: '#7fb35a',
-    speckles: ['#72a650', '#8cc064', '#6a9a49'],
-    patches: ['#93c76c', '#6e9e4c', '#a8cf7a'],
-    bands: [
-      { side: 'left', from: 8.5, to: 15, color: '#e8d6a8', y: 0.04 },
-      { side: 'left', from: 15, to: 330, color: '#3f8fc4', y: 0.04 },
-      { side: 'left', from: 15, to: 17, color: '#7fc4e6', y: 0.09 },
-    ],
-  },
+  terrain: { base: '#729654', speckles: ['#648748', '#8baa66', '#55753f'], patches: ['#a3b97b', '#597e43', '#839b59'] },
   road: {
-    asphalt: '#575b63',
-    asphaltSpeckle: '#62666e',
-    edgeLine: '#ffffff',
-    centerLine: '#ffd23f',
-    shoulder: '#a49a86',
-    curve: [
-      { amplitude: 18, wavelength: 620, phase: 0.6 },
-      { amplitude: 6, wavelength: 210, phase: 2.1 },
-    ],
+    asphalt: '#565c62', asphaltSpeckle: '#656d70', edgeLine: '#ffffff', centerLine: '#ffd24a', shoulder: '#b0a28a',
+    curve: [{ amplitude: 13, wavelength: 650, phase: 0.2 }, { amplitude: 4, wavelength: 310, phase: 0.7 }],
   },
   props: {
-    perChunk: [5, 9],
-    shoulderCones: 0,
+    perChunk: [14, 20], shoulderCones: 0,
     items: [
-      { kind: 'pine', weight: 6, minDistance: 11, maxDistance: 30, scale: [0.8, 1.5], maxPerChunk: 6, side: 'right' },
-      { kind: 'roundTree', weight: 2, minDistance: 11, maxDistance: 25, scale: [0.8, 1.3], maxPerChunk: 2, side: 'right' },
-      { kind: 'rock', weight: 3, minDistance: 0.5, maxDistance: 1.5, scale: [0.6, 1.3], maxPerChunk: 3 },
-      { kind: 'bush', weight: 2, minDistance: 0.8, maxDistance: 3, scale: [0.8, 1.3], maxPerChunk: 3, side: 'right' },
-      { kind: 'flowers', weight: 2, minDistance: 0.6, maxDistance: 3, scale: [0.9, 1.3], maxPerChunk: 3, side: 'right' },
-      { kind: 'log', weight: 1, minDistance: 1.5, maxDistance: 2.5, scale: [0.9, 1.2], maxPerChunk: 1, side: 'right' },
-      { kind: 'viewpoint', weight: 0.6, minDistance: 0.8, maxDistance: 1.4, scale: [1, 1], maxPerChunk: 1, facing: 'traffic', side: 'left' },
-      { kind: 'sailboat', weight: 1.2, minDistance: 25, maxDistance: 70, scale: [1, 1.4], maxPerChunk: 1, side: 'left' },
-      // Now and then: a mountain with a gondola, set back behind the forest.
-      { kind: 'gondola', weight: 1, minDistance: 30, maxDistance: 34, scale: [1, 1], maxPerChunk: 1, facing: 'road', side: 'right', every: { chunks: 13, offset: 4 } },
+      { kind: 'pine', weight: 12, minDistance: 3.5, maxDistance: 38, scale: [1.2, 2.1], maxPerChunk: 12 },
+      { kind: 'roundTree', weight: 3, minDistance: 6, maxDistance: 28, scale: [0.9, 1.5], maxPerChunk: 3 },
+      { kind: 'rock', weight: 2, minDistance: 2, maxDistance: 15, scale: [0.7, 1.6], maxPerChunk: 3 },
+      { kind: 'bush', weight: 3, minDistance: 1.2, maxDistance: 20, scale: [0.7, 1.2], maxPerChunk: 4 },
+      { kind: 'flowers', weight: 1, minDistance: 1, maxDistance: 5, scale: [0.9, 1.2], maxPerChunk: 2 },
+      { kind: 'elk', weight: 3, minDistance: 3, maxDistance: 8, scale: [1, 1.2], maxPerChunk: 3, facing: 'road' },
+      { kind: 'moose', weight: 1, minDistance: 5, maxDistance: 10, scale: [1, 1.1], maxPerChunk: 1, facing: 'road' },
+      { kind: 'bear', weight: 1.5, minDistance: 4, maxDistance: 10, scale: [1, 1.2], maxPerChunk: 2, facing: 'road' },
+      { kind: 'bighorn', weight: 2, minDistance: 2.5, maxDistance: 7, scale: [1, 1.15], maxPerChunk: 2, facing: 'road' },
+      { kind: 'wolf', weight: 1, minDistance: 4, maxDistance: 9, scale: [1, 1.1], maxPerChunk: 2, facing: 'road' },
+      { kind: 'elk', weight: 1, minDistance: 3.5, maxDistance: 4.5, scale: [1, 1], maxPerChunk: 3, facing: 'road', every: { chunks: 4, offset: 0 } },
+      { kind: 'wildlifeBridge', weight: 1, minDistance: 0, maxDistance: 0, scale: [1, 1], maxPerChunk: 1,
+        facing: 'traffic', roadCentered: true, every: { chunks: 8, offset: 2 } },
     ],
   },
-  // Sea to Sky highway: campers, the odd sports car zooming past, an RCMP-style patrol.
-  freightRailway: { offset: 12, wagons: 5, speed: 20, intervalSec: [14, 24] },
-  traffic: {
-    enabled: true,
-    vehicles: ['car', 'camper', 'pickup', 'van', 'car', 'camper', 'sportsCar', 'police'],
-    overtaking: ['sportsCar'],
-  },
-  audio: {
-    engineBaseHz: 50,
-    ambience: { noiseLevel: 0.06, noiseCutoff: 520, noiseSwellHz: 0.12, events: ['wave'], eventInterval: [5, 10] },
-  },
+  traffic: { enabled: true, vehicles: ['car', 'camper', 'van', 'pickup'] },
+  audio: { engineBaseHz: 50, ambience: { noiseLevel: 0.035, noiseCutoff: 550, events: ['chirp'], eventInterval: [3, 7] } },
 };

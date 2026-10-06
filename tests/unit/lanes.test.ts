@@ -120,7 +120,7 @@ describe('built-in traffic', () => {
 });
 
 describe('sports car and police', () => {
-  const preset = getPreset('nature');
+  const preset = getPreset('sea-to-sky');
   const road = new RoadGenerator(preset.road.curve);
 
   it('a sports car comes from behind, passes the bus and announces it once', () => {

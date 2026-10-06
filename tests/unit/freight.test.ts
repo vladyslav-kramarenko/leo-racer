@@ -5,9 +5,9 @@ import { FreightRailway } from '../../src/world/FreightRailway';
 import { getPreset } from '../../src/world/presets';
 import { RoadGenerator } from '../../src/world/RoadGenerator';
 
-const nature = getPreset('nature');
-const cfg = nature.freightRailway!;
-const road = new RoadGenerator(nature.road.curve);
+const seaToSky = getPreset('sea-to-sky');
+const cfg = seaToSky.freightRailway!;
+const road = new RoadGenerator(seaToSky.road.curve);
 
 function setup() {
   const railway = new FreightRailway(road, cfg, 9, () => 0);
@@ -15,7 +15,7 @@ function setup() {
   return railway;
 }
 
-describe('Nature steam freight', () => {
+describe('Sea to Sky steam freight', () => {
   it('keeps track segments outside the driving corridor when chunks recycle', () => {
     const railway = setup();
     const track = railway.group.children[0] as THREE.InstancedMesh;

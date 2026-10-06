@@ -32,6 +32,19 @@ describe('saved pedal defaults', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
+  it('migrates the old coastal Nature selection and preserves an explicit new Nature choice', () => {
+    values.set('leo.settings', JSON.stringify({ worldId: 'nature', calibration, soundOn: false }));
+    const migrated = loadSettings();
+    expect(migrated.worldId).toBe('sea-to-sky');
+    expect(migrated.calibration).toEqual(calibration);
+    expect(migrated.soundOn).toBe(false);
+    saveSettings({ worldId: 'nature' });
+    expect(loadSettings().worldId).toBe('nature');
+    expect(loadSettings().worldCatalogVersion).toBe(2);
+    saveSettings({ soundOn: true });
+    expect(loadSettings().worldId).toBe('nature');
+  });
+
   it('restores both pedals after loading and changing unrelated settings', () => {
     saveSettings({ calibration });
     saveSettings({ soundOn: false });

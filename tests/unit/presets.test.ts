@@ -20,9 +20,9 @@ describe('world preset loading', () => {
     for (const preset of listPresets()) expect(validatePreset(preset)).toEqual([]);
   });
 
-  it('ships four worlds, each loadable by id', () => {
-    expect(listPresets().map((p) => p.id)).toEqual(['construction', 'nature', 'farm', 'city']);
-    for (const id of ['construction', 'nature', 'farm', 'city']) expect(getPreset(id).id).toBe(id);
+  it('ships five worlds, each loadable by id', () => {
+    expect(listPresets().map((p) => p.id)).toEqual(['construction', 'sea-to-sky', 'nature', 'farm', 'city']);
+    for (const id of ['construction', 'sea-to-sky', 'nature', 'farm', 'city']) expect(getPreset(id).id).toBe(id);
   });
 
   it('every world has 5+ kinds of props', () => {
