@@ -101,12 +101,18 @@ While driving, press keyboard **1–6** (top row or numpad) to test: double beep
 
 On the wheel, the first six buttons not assigned to either gear set play sounds 1–6 in button-number order. Gear buttons remain reserved for shifting. Additional buttons repeat the six sounds. Hold a button to check that it only triggers once; release and press again to replay. Test with sound enabled and the parent menu closed.
 
-## Nature steam freight
+## Sea to Sky steam freight
 
-Nature has a ground-level railway on the forest side. A steam locomotive, coal tender, five loaded ore wagons and red caboose pass in alternating directions. Check the first approaching train soon after entering Nature, then a following train after another 14–24 seconds between trains. Wheels, connecting rods and chimney steam should animate; opening the parent menu pauses them. Track and cars should follow the road curves and remain clear of rocks, trees and the driving corridor.
+Sea to Sky has a ground-level railway on the forest side. A steam locomotive, coal tender, five loaded ore wagons and red caboose pass in alternating directions. Check the first approaching train soon after entering Sea to Sky, then a following train after another 14–24 seconds between trains. Wheels, connecting rods and chimney steam should animate; opening the parent menu pauses them. Track and cars should follow the road curves and remain clear of rocks, trees and the driving corridor.
 
 The models are a fictional early twentieth-century BC freight train, inspired by the region's railway and mining history. Historical references: [Railway Museum of BC's 1910 PGE steam locomotive](https://www.wcra.org/exhibit/pacific-great-eastern-2-6-2st/) and [Britannia Mine Museum's historical FAQs](https://www.britanniaminemuseum.ca/pages/historical-faqs). This is a visual homage rather than a reconstruction of Britannia's ore transportation route.
 
 ## Construction pipe installation
 
 An excavation site appears on the left around 120–160 m into Construction, then every 320 m. Check that the blue main sits below ground, with soil walls, timber shoring and an open working end under the excavator bucket. Spare pipes, spoil piles and red/white guards sit outside the trench. Drive past several sites: recycled chunks must restore the ground without leaving holes in unrelated places. Other roadside machinery should not spawn in the excavation.
+
+## Nature forest and wildlife crossings
+
+Nature is a separate Banff-inspired forest world. Confirm all five location cards appear in both menus, and that an old saved coastal Nature selection upgrades to Sea to Sky. Nature has forest on both sides, snowy Rockies, elk, moose, bears, bighorn sheep and wolves. Animals stand outside the driving corridor and turn their heads gently. A grass-covered overpass appears around 80–120 m, repeating every 320 m; the bus passes underneath while an elk walks across the top. Trees must not block the bridge portal or ramps. Parent-menu pause must also pause the crossing animal.
+
+Design reference: [Parks Canada on Banff wildlife crossings](https://www.parks.canada.ca/nature/science/especes-species/routes-roads?wbdisable=true). The world uses original toy models inspired by the park, with no attempt to recreate a specific road or exact bridge.

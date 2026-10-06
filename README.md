@@ -15,11 +15,15 @@ Leo Racer is a browser driving toy for children aged 2–4.
 
 **Works with a keyboard or a real steering wheel. No hardware required.**
 
-| Construction | Nature |
+| Construction | Sea to Sky |
 | --- | --- |
-| ![Construction world](docs/images/construction.jpg) | ![Nature world](docs/images/nature.jpg) |
+| ![Construction world](docs/images/construction.jpg) | ![Sea to Sky world](docs/images/nature.jpg) |
 | **Farm** | **City** |
 | ![Farm world](docs/images/farm.jpg) | ![City world](docs/images/city.jpg) |
+
+**Nature — a Banff-inspired forest with wildlife overpasses.**
+
+![Nature forest world](public/worlds/nature-forest.jpg)
 
 | Brake: the tail lights flash | Gentle end of a timed session |
 | --- | --- |
