@@ -12,3 +12,4 @@ playwright-report/
 .env.*
 .claude/settings.local.json
 Microsoft/
+*.log
