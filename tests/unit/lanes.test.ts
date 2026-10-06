@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { pickWeighted } from '../../src/drawings/DrawingSprite';
 import { CONFIG } from '../../src/game/config';
 import { TrafficManager } from '../../src/traffic/TrafficManager';
@@ -76,6 +76,21 @@ describe('drawing frequency', () => {
 describe('built-in traffic', () => {
   const preset = getPreset('construction');
   const road = new RoadGenerator(preset.road.curve);
+
+  it('reports a real overlap once before recycling the vehicle', () => {
+    const traffic = new TrafficManager(road, preset.traffic, 'low', () => 0.3);
+    const contact = vi.fn();
+    traffic.onContact(contact);
+    traffic.update(2, 2, { s: 0, d: 0 });
+    const pool = (traffic as unknown as { pool: { active: boolean; s: number; d: number }[] }).pool;
+    const vehicle = pool.find((v) => v.active)!;
+    expect(vehicle).toBeDefined();
+    traffic.update(0, 2, { s: vehicle.s, d: vehicle.d });
+    expect(contact).toHaveBeenCalledTimes(1);
+    expect(vehicle.active).toBe(false);
+    traffic.update(0, 2, { s: vehicle.s, d: vehicle.d });
+    expect(contact).toHaveBeenCalledTimes(1);
+  });
 
   it('spawns up to the density cap and never more', () => {
     const traffic = new TrafficManager(road, preset.traffic, 'busy', () => 0.3);

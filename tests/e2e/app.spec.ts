@@ -63,6 +63,140 @@ test('page loads with the start screen', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('saved wheel can calibrate its brake pedal and brake after reload', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 640, height: 360 });
+  await page.addInitScript(() => {
+    const axes = [0, 1, 1];
+    Object.defineProperty(window, '__testWheelAxes', { value: axes });
+    Object.defineProperty(navigator, 'getGamepads', { value: () => [{
+      id: 'Test Wheel', index: 0, connected: true, axes, buttons: [],
+    }] });
+    if (!localStorage.getItem('leo.settings')) {
+      localStorage.setItem('leo.settings', JSON.stringify({
+        calibration: { gamepadId: 'Test Wheel', steeringAxis: 0, invertAxis: false,
+          min: -1, center: 0, max: 1, deadzone: 0.04 },
+      }));
+    }
+  });
+  const pedal = (value: number) => page.evaluate((pressed) => {
+    (window as unknown as { __testWheelAxes: number[] }).__testWheelAxes[1] = pressed;
+  }, value);
+  const accelerator = (value: number) => page.evaluate((pressed) => {
+    (window as unknown as { __testWheelAxes: number[] }).__testWheelAxes[2] = pressed;
+  }, value);
+  await startDriving(page);
+  const cruise = (await state(page)).speed;
+  await openParentMenu(page);
+  await page.getByTestId('calibrate-button').click();
+  await page.getByRole('button', { name: 'Calibrate brake pedal', exact: true }).click();
+  await page.getByRole('button', { name: 'Pedals released' }).click();
+  await pedal(-1);
+  const save = page.getByRole('button', { name: 'Save brake pedal', exact: true });
+  await expect(save).toBeEnabled();
+  await save.click();
+  await expect(page.getByText('Brake axis 1: 100%')).toBeVisible();
+  await pedal(1);
+  await page.getByRole('button', { name: 'Calibrate accelerator pedal', exact: true }).click();
+  await page.getByRole('button', { name: 'Pedals released' }).click();
+  await accelerator(-1);
+  const saveAccelerator = page.getByRole('button', { name: 'Save accelerator pedal', exact: true });
+  await expect(saveAccelerator).toBeEnabled();
+  await saveAccelerator.click();
+  await expect(page.getByText('Accelerator axis 2: 100%')).toBeVisible();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await page.getByTestId('resume-button').click();
+  await expect.poll(async () => (await state(page)).speed, { timeout: 15_000 }).toBeGreaterThan(cruise);
+  await accelerator(1);
+  await expect.poll(async () => (await state(page)).speed, { timeout: 15_000 }).toBe(cruise);
+  await pedal(-1);
+  await expect.poll(async () => (await state(page)).braking).toBe(true);
+  await pedal(1);
+  await expect.poll(async () => (await state(page)).braking).toBe(false);
+  await expect.poll(async () => (await state(page)).speed).toBeGreaterThan(0);
+  // The separately saved default must survive a reset of general settings.
+  await page.evaluate(() => localStorage.removeItem('leo.settings'));
+  await page.reload();
+  await page.getByTestId('start-button').click();
+  await accelerator(-1);
+  await expect.poll(async () => (await state(page)).speed, { timeout: 15_000 }).toBeGreaterThan(cruise);
+  await pedal(-1);
+  await expect.poll(async () => (await state(page)).braking).toBe(true);
+});
+
+test('wheel gear bindings persist and shift once per press', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 640, height: 360 });
+  await page.addInitScript(() => {
+    const buttons = Array<boolean>(6).fill(false);
+    Object.defineProperty(window, '__gearButtons', { value: buttons });
+    Object.defineProperty(navigator, 'getGamepads', { value: () => [{
+      id: 'Gear Wheel', index: 0, connected: true, axes: [0],
+      buttons: buttons.map((pressed) => ({ pressed, value: Number(pressed), touched: pressed })),
+    }] });
+    if (!localStorage.getItem('leo.settings')) localStorage.setItem('leo.settings', JSON.stringify({
+      calibration: { gamepadId: 'Gear Wheel', steeringAxis: 0, min: -1, center: 0, max: 1, invertAxis: false, deadzone: 0.04 },
+    }));
+  });
+  const press = (index: number) => page.evaluate((button) => {
+    const buttons = (window as unknown as { __gearButtons: boolean[] }).__gearButtons;
+    buttons.fill(false);
+    if (button >= 0) buttons[button] = true;
+  }, index);
+  const gear = () => page.evaluate(() => (window as unknown as { __leo: { live(): { gear: string } } }).__leo.live().gear);
+  await startDriving(page);
+  const cruise = (await state(page)).speed;
+  await openParentMenu(page);
+  await page.getByTestId('calibrate-button').click();
+  await page.getByRole('button', { name: 'Assign gear buttons', exact: true }).click();
+  await press(2);
+  await expect(page.getByText('Release it, then press the wheel button for GEAR DOWN.')).toBeVisible();
+  await press(-1);
+  await press(3);
+  await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await page.getByTestId('resume-button').click();
+  await expect.poll(gear).toMatch(/^3 \/ 5/);
+  await press(-1);
+  await page.waitForTimeout(200);
+  await press(2);
+  await expect.poll(gear).toMatch(/^4 \/ 5/);
+  await page.waitForTimeout(300);
+  await expect.poll(gear).toMatch(/^4 \/ 5/);
+  await expect.poll(async () => (await state(page)).speed).toBeGreaterThan(cruise);
+  await page.reload();
+  await page.getByTestId('start-button').click();
+  await expect.poll(gear).toMatch(/^3 \/ 5/);
+  await expect.poll(() => page.evaluate(() =>
+    (window as unknown as { __leo: { live(): { gamepadId: string } } }).__leo.live().gamepadId,
+  )).toBe('Gear Wheel');
+  await press(2);
+  await expect.poll(gear).toMatch(/^4 \/ 5/);
+  await page.evaluate(() => (window as unknown as { __leo: { endSession(): void } }).__leo.endSession());
+  await press(-1);
+  await page.waitForTimeout(200);
+  await press(3);
+  await expect.poll(gear).toMatch(/^4 \/ 5/);
+});
+
+test('holding forward boosts speed, releasing restores cruise and brake overrides gas', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 640, height: 360 });
+  await startDriving(page);
+  const cruise = (await state(page)).speed;
+  await page.keyboard.down('ArrowUp');
+  await expect.poll(async () => (await state(page)).speed, { timeout: 15_000 }).toBeGreaterThan(cruise);
+  await page.keyboard.down('ArrowDown');
+  await expect.poll(async () => (await state(page)).braking).toBe(true);
+  await page.keyboard.up('ArrowDown');
+  await page.keyboard.up('ArrowUp');
+  await expect.poll(async () => (await state(page)).speed, { timeout: 15_000 }).toBe(cruise);
+  await page.keyboard.down('KeyW');
+  await expect.poll(async () => (await state(page)).speed, { timeout: 15_000 }).toBeGreaterThan(cruise);
+  await page.keyboard.up('KeyW');
+  await expect.poll(async () => (await state(page)).speed, { timeout: 15_000 }).toBe(cruise);
+});
+
 test('START works: bus drives on autopilot with no child-facing UI', async ({ page }) => {
   const errors = trackErrors(page);
   await startDriving(page);

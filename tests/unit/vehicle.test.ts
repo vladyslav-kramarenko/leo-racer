@@ -64,6 +64,46 @@ describe('lane limits (impossible to fail)', () => {
   });
 });
 
+describe('accelerator boost', () => {
+  const run = (v: VehicleController, braking: boolean, multiplier: number) => {
+    for (let i = 0; i < 1200; i++) v.update(1 / 60, 1, braking, multiplier);
+  };
+
+  it('smoothly reaches triple speed only while held and returns after release', () => {
+    const v = new VehicleController();
+    v.update(1 / 60, 0, false, 3);
+    expect(v.state.speed).toBeGreaterThan(speed);
+    expect(v.state.speed).toBeLessThan(speed * 3);
+    run(v, false, 3);
+    expect(v.state.speed).toBe(speed * 3);
+    expect(Math.abs(v.state.lateralOffset)).toBeLessThanOrEqual(hardLimit);
+    run(v, false, 1);
+    expect(v.state.speed).toBe(speed);
+  });
+
+  it('braking wins over the accelerator and session stop remains effective', () => {
+    const v = new VehicleController();
+    run(v, false, 3);
+    run(v, true, 3);
+    expect(v.state.speed).toBe(0);
+    v.setCruiseScale(0);
+    run(v, false, 3);
+    expect(v.state.speed).toBe(0);
+  });
+
+  it('supports intermediate pedal speeds and clamps invalid multipliers', () => {
+    const v = new VehicleController();
+    for (const multiplier of [1.5, 2.25, 3]) {
+      run(v, false, multiplier);
+      expect(v.state.speed).toBe(speed * multiplier);
+    }
+    run(v, false, 100);
+    expect(v.state.speed).toBe(speed * 3);
+    run(v, false, NaN);
+    expect(v.state.speed).toBe(speed);
+  });
+});
+
 describe('braking', () => {
   const step = 1 / 60;
   const run = (v: VehicleController, seconds: number, steering: number, braking: boolean) => {
