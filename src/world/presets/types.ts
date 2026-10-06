@@ -218,5 +218,14 @@ export interface WorldPreset {
   props: PropsPreset;
   traffic: TrafficPreset;
   guideway?: GuidewayPreset;
+  freightRailway?: FreightRailwayPreset;
   audio: AudioPreset;
+}
+
+/** Historical steam freight on ground-level rails to the right of the road. */
+export interface FreightRailwayPreset {
+  offset: number;
+  wagons: number;
+  speed: number;
+  intervalSec: [number, number];
 }

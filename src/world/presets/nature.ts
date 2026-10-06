@@ -48,12 +48,12 @@ export const nature: WorldPreset = {
     perChunk: [5, 9],
     shoulderCones: 0,
     items: [
-      { kind: 'pine', weight: 6, minDistance: 3, maxDistance: 30, scale: [0.8, 1.5], maxPerChunk: 6, side: 'right' },
-      { kind: 'roundTree', weight: 2, minDistance: 3, maxDistance: 25, scale: [0.8, 1.3], maxPerChunk: 2, side: 'right' },
-      { kind: 'rock', weight: 3, minDistance: 0.5, maxDistance: 2, scale: [0.6, 1.3], maxPerChunk: 3 },
-      { kind: 'bush', weight: 2, minDistance: 0.8, maxDistance: 8, scale: [0.8, 1.3], maxPerChunk: 3, side: 'right' },
-      { kind: 'flowers', weight: 2, minDistance: 0.6, maxDistance: 6, scale: [0.9, 1.3], maxPerChunk: 3, side: 'right' },
-      { kind: 'log', weight: 1, minDistance: 2, maxDistance: 10, scale: [0.9, 1.2], maxPerChunk: 1, side: 'right' },
+      { kind: 'pine', weight: 6, minDistance: 11, maxDistance: 30, scale: [0.8, 1.5], maxPerChunk: 6, side: 'right' },
+      { kind: 'roundTree', weight: 2, minDistance: 11, maxDistance: 25, scale: [0.8, 1.3], maxPerChunk: 2, side: 'right' },
+      { kind: 'rock', weight: 3, minDistance: 0.5, maxDistance: 1.5, scale: [0.6, 1.3], maxPerChunk: 3 },
+      { kind: 'bush', weight: 2, minDistance: 0.8, maxDistance: 3, scale: [0.8, 1.3], maxPerChunk: 3, side: 'right' },
+      { kind: 'flowers', weight: 2, minDistance: 0.6, maxDistance: 3, scale: [0.9, 1.3], maxPerChunk: 3, side: 'right' },
+      { kind: 'log', weight: 1, minDistance: 1.5, maxDistance: 2.5, scale: [0.9, 1.2], maxPerChunk: 1, side: 'right' },
       { kind: 'viewpoint', weight: 0.6, minDistance: 0.8, maxDistance: 1.4, scale: [1, 1], maxPerChunk: 1, facing: 'traffic', side: 'left' },
       { kind: 'sailboat', weight: 1.2, minDistance: 25, maxDistance: 70, scale: [1, 1.4], maxPerChunk: 1, side: 'left' },
       // Now and then: a mountain with a gondola, set back behind the forest.
@@ -61,6 +61,7 @@ export const nature: WorldPreset = {
     ],
   },
   // Sea to Sky highway: campers, the odd sports car zooming past, an RCMP-style patrol.
+  freightRailway: { offset: 12, wagons: 5, speed: 20, intervalSec: [14, 24] },
   traffic: {
     enabled: true,
     vehicles: ['car', 'camper', 'pickup', 'van', 'car', 'camper', 'sportsCar', 'police'],

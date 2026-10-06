@@ -54,6 +54,13 @@ export function validatePreset(preset: WorldPreset): string[] {
     if (g.height < 5) errors.push('guideway.height must be >= 5 m (clear of vehicles)');
     if (g.train.cars < 1 || g.train.speed <= 0) errors.push('guideway.train needs cars and a positive speed');
   }
+  if (preset.freightRailway) {
+    const rail = preset.freightRailway;
+    if (!Number.isFinite(rail.offset) || rail.offset < 10) errors.push('freightRailway.offset must clear the road and shoulder');
+    if (!Number.isInteger(rail.wagons) || rail.wagons < 1 || rail.wagons > 12) errors.push('freightRailway.wagons must be 1–12');
+    if (!Number.isFinite(rail.speed) || rail.speed <= 0) errors.push('freightRailway.speed must be positive');
+    if (rail.intervalSec[0] <= 0 || rail.intervalSec[1] < rail.intervalSec[0]) errors.push('freightRailway.intervalSec must be a positive [min, max]');
+  }
   if (!preset.traffic) errors.push('traffic is required');
   if (preset.traffic?.enabled && !preset.traffic.vehicles.length) errors.push('traffic.vehicles must not be empty');
   if (!preset.audio?.ambience) errors.push('audio.ambience is required');

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CONFIG } from '../game/config';
 import { ChunkManager } from './ChunkManager';
 import { Guideway } from './Guideway';
+import { FreightRailway } from './FreightRailway';
 import { box, buildColoredGeometry, cone, makeCanvas, rbox } from './geometry';
 import { ObjectSpawner } from './ObjectSpawner';
 import type { HillsPreset, SkylinePreset, SkyPreset, TerrainPreset, WorldPreset } from './presets/types';
@@ -23,6 +24,7 @@ export class WorldManager {
   private readonly hills: THREE.Mesh;
   private readonly skyline: THREE.Mesh | null;
   readonly guideway: Guideway | null;
+  readonly freightRailway: FreightRailway | null;
   private readonly sun: THREE.DirectionalLight;
   private readonly terrainTile = 24;
 
@@ -63,6 +65,12 @@ export class WorldManager {
       this.chunks.onChunkAssigned((slot, index) => guideway.assign(slot, index));
       this.group.add(guideway.group);
     }
+    this.freightRailway = preset.freightRailway ? new FreightRailway(this.road, preset.freightRailway, this.chunks.poolSize) : null;
+    if (this.freightRailway) {
+      const railway = this.freightRailway;
+      this.chunks.onChunkAssigned((slot, index) => railway.assign(slot, index));
+      this.group.add(railway.group);
+    }
     this.chunks.reset(0);
     this.group.add(this.chunks.group, this.props.group);
     scene.add(this.group);
@@ -73,6 +81,7 @@ export class WorldManager {
     this.chunks.update(progress);
     this.props.animate(timeSec);
     this.guideway?.update(dt, progress);
+    this.freightRailway?.update(dt, progress);
 
     // Terrain follows the vehicle while its texture stays fixed in world space.
     this.terrain.position.set(focus.x, 0, focus.z);

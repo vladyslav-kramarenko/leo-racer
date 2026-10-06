@@ -100,3 +100,9 @@ Keyboard gears: **Left Shift** shifts down, **Right Shift** shifts up. Each pres
 While driving, press keyboard **1–6** (top row or numpad) to test: double beep, truck horn, bicycle bell, happy melody, high-low horn, and cartoon toot. **Space / H** plays the first sound.
 
 On the wheel, the first six buttons not assigned to either gear set play sounds 1–6 in button-number order. Gear buttons remain reserved for shifting. Additional buttons repeat the six sounds. Hold a button to check that it only triggers once; release and press again to replay. Test with sound enabled and the parent menu closed.
+
+## Nature steam freight
+
+Nature has a ground-level railway on the forest side. A steam locomotive, coal tender, five loaded ore wagons and red caboose pass in alternating directions. Check the first approaching train soon after entering Nature, then a following train after another 14–24 seconds between trains. Wheels, connecting rods and chimney steam should animate; opening the parent menu pauses them. Track and cars should follow the road curves and remain clear of rocks, trees and the driving corridor.
+
+The models are a fictional early twentieth-century BC freight train, inspired by the region's railway and mining history. Historical references: [Railway Museum of BC's 1910 PGE steam locomotive](https://www.wcra.org/exhibit/pacific-great-eastern-2-6-2st/) and [Britannia Mine Museum's historical FAQs](https://www.britanniaminemuseum.ca/pages/historical-faqs). This is a visual homage rather than a reconstruction of Britannia's ore transportation route.
