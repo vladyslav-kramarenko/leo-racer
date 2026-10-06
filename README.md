@@ -25,14 +25,19 @@ Leo Racer is a browser driving toy for children aged 2–4.
 
 ![Nature forest world](public/worlds/nature-forest.jpg)
 
+**Winter — a ski village with snowy firs, chairlifts, skiers, a skating pond and chalets.**
+
+![Winter ski village](public/worlds/winter.jpg)
+
 | Brake: the tail lights flash | Gentle end of a timed session |
 | --- | --- |
 | ![Braking](docs/images/brake.jpg) | ![All done screen](docs/images/all-done.jpg) |
 
 ## Features
 
-- **Four worlds:** Construction, Nature, Farm and City. All are endless and pure data presets on one engine. Props are animated: cranes turn, windmills spin, traffic lights cycle.
-  Nature has the sea, snowy mountains and now and then a gondola gliding up a mountainside.
+- **Six worlds:** Construction, Sea to Sky, Nature, Winter, Farm and City. All are endless and pure data presets on one engine. Props are animated: cranes turn, windmills spin, traffic lights cycle.
+  Sea to Sky has the sea, snowy mountains, a gondola and a historical steam freight train. Nature is a forest with wild animals and wildlife overpasses.
+  Winter has falling snow, a moving chairlift and skiers, ice skaters with hockey goals, a sled hill, warm chalet windows and chimney smoke, snowmen, snow forts, foxes and white hares. Snowplows and pickups carrying skis drive along the cleared road.
   City is Vancouver-inspired: glass towers, the seawall, SkyTrain overhead, cherry blossoms and simplified landmarks.
 - **Many inputs:**
   - Keyboard steering, brake and horn.
@@ -42,8 +47,8 @@ Leo Racer is a browser driving toy for children aged 2–4.
 - **Manual ↔ autopilot:** any steering takes over instantly. Autopilot blends back in after 8 s idle. There are no visible modes.
 - **Haptic feedback:** on controllers exposing browser vibration, a short impulse marks a traffic overlap and gentle repeated pulses mark outward steering at the road boundary. Wheel torque effects require a native bridge; the browser feature is rumble only. Wheel setup has **Test vibration**, and Diagnostics shows its availability.
 - **Built-in traffic:** cars, trucks, tractors and buses drive in their lanes and make way for the school bus. Parents set the density: Off, Low, Normal or Busy.
-  - **Police:** a police SUV with a red/blue light bar flashing at 1.5 Hz (below the 3 Hz photosensitivity limit) drives in Nature and City.
-  - **Sports car:** an 80s wedge supercar zooms past the bus on the Nature highway and drives calmly in City.
+  - **Police:** a police SUV with a red/blue light bar flashing at 1.5 Hz (below the 3 Hz photosensitivity limit) drives in Sea to Sky and City.
+  - **Sports car:** an 80s wedge supercar zooms past the bus on the Sea to Sky highway and drives calmly in City.
 - **Draw Your World:** the photo is resized and its metadata stripped on the device. AI then cleans the drawing and suggests MOVES or STAYS, and a parent can override that.
   - A drawing that STAYS stands by the road.
   - A drawing that MOVES drives in a lane or alongside the road.

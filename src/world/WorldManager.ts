@@ -3,6 +3,7 @@ import { CONFIG } from '../game/config';
 import { ChunkManager } from './ChunkManager';
 import { Guideway } from './Guideway';
 import { FreightRailway } from './FreightRailway';
+import { Snowfall } from './Snowfall';
 import { applyGroundCutouts } from './groundCutouts';
 import { box, buildColoredGeometry, cone, makeCanvas, rbox } from './geometry';
 import { ObjectSpawner } from './ObjectSpawner';
@@ -26,6 +27,7 @@ export class WorldManager {
   private readonly skyline: THREE.Mesh | null;
   readonly guideway: Guideway | null;
   readonly freightRailway: FreightRailway | null;
+  readonly snowfall: Snowfall | null;
   private readonly sun: THREE.DirectionalLight;
   private readonly terrainTile = 24;
 
@@ -74,6 +76,8 @@ export class WorldManager {
       this.group.add(railway.group);
     }
     this.chunks.reset(0);
+    this.snowfall = preset.snowfall ? new Snowfall(preset.snowfall.count, preset.snowfall.speed) : null;
+    if (this.snowfall) this.group.add(this.snowfall.points);
     this.group.add(this.chunks.group, this.props.group);
     scene.add(this.group);
   }
@@ -84,6 +88,7 @@ export class WorldManager {
     this.props.animate(timeSec);
     this.guideway?.update(dt, progress);
     this.freightRailway?.update(dt, progress);
+    this.snowfall?.update(dt, focus);
 
     // Terrain follows the vehicle while its texture stays fixed in world space.
     this.terrain.position.set(focus.x, 0, focus.z);

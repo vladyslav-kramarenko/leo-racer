@@ -33,6 +33,17 @@ export type PropKind =
   | 'bighorn'
   | 'wolf'
   | 'wildlifeBridge'
+  // Winter
+  | 'snowPine'
+  | 'chalet'
+  | 'snowman'
+  | 'skiSlope'
+  | 'iceRink'
+  | 'sledHill'
+  | 'snowFort'
+  | 'snowbank'
+  | 'fox'
+  | 'hare'
   // Farm
   | 'fence'
   | 'barn'
@@ -162,6 +173,8 @@ export interface PropsPreset {
 export type TrafficKind =
   | 'car'
   | 'pickup'
+  | 'skiPickup'
+  | 'snowplow'
   | 'van'
   | 'dumpTruck'
   | 'mixer'
@@ -228,6 +241,8 @@ export interface WorldPreset {
   traffic: TrafficPreset;
   guideway?: GuidewayPreset;
   freightRailway?: FreightRailwayPreset;
+  /** A fixed pool of gently falling snowflakes around the player. */
+  snowfall?: { count: number; speed: number };
   audio: AudioPreset;
 }
 

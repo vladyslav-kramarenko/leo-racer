@@ -1,6 +1,7 @@
 import type * as THREE from 'three';
 import { buildColoredGeometry } from '../world/geometry';
 import type { TrafficKind } from '../world/presets/types';
+import { skiPickupParts, snowplowParts } from '../world/winterVehicles';
 import {
   camperParts,
   carParts,
@@ -46,6 +47,12 @@ export function buildTrafficGeometries(kinds: readonly TrafficKind[]): Map<Traff
       case 'pickup':
         out.set(kind, ['#3d7be0', '#e8453c', '#6b6f75'].map((c) => buildColoredGeometry(pickupParts(c))));
         break;
+      case 'skiPickup':
+        out.set(kind, ['#318caa', '#c65a53'].map((c) => buildColoredGeometry(skiPickupParts(c))));
+        break;
+      case 'snowplow':
+        out.set(kind, [buildColoredGeometry(snowplowParts())]);
+        break;
       case 'van':
         out.set(kind, ['#2fb5a8', '#f2f2f2', '#f2c230'].map((c) => buildColoredGeometry(vanParts(c))));
         break;
@@ -83,6 +90,8 @@ export function buildTrafficGeometries(kinds: readonly TrafficKind[]): Map<Traff
 export const HALF_WIDTH: Record<TrafficKind, number> = {
   car: 0.95,
   pickup: 1,
+  skiPickup: 1.15,
+  snowplow: 1.5,
   van: 1.05,
   dumpTruck: 1.35,
   mixer: 1.35,
@@ -99,6 +108,7 @@ export const FLASHING: ReadonlySet<TrafficKind> = new Set(['police']);
 /** Slow vehicles (tractors) travel slower than the rest. */
 export const SPEED_FACTOR: Partial<Record<TrafficKind, number>> = {
   tractor: 0.6,
+  snowplow: 0.7,
   mixer: 0.85,
   dumpTruck: 0.85,
 };

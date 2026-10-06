@@ -255,6 +255,15 @@ export class ObjectSpawner {
         this.m.multiplyMatrices(base, this.m2);
         return;
       }
+      case 'orbit': {
+        const angle = (2 * Math.PI * t) / a.period + phase;
+        // Local forward is -Z; the ellipse derivative determines the heading.
+        this.m2.makeRotationY(Math.atan2(a.radius[0] * Math.sin(angle), -a.radius[1] * Math.cos(angle)));
+        this.m2.setPosition(part.pivot.x + a.radius[0] * Math.cos(angle), part.pivot.y,
+          part.pivot.z + a.radius[1] * Math.sin(angle));
+        this.m.multiplyMatrices(base, this.m2);
+        return;
+      }
     }
     if (!visible) {
       this.m.copy(ZERO);

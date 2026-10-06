@@ -5,6 +5,7 @@ import { carParts, dumpTruckParts, tractorParts, TOY } from './toyParts';
 import { quarry } from './quarry';
 import { pipeTrench } from './pipeTrench';
 import { wildlife, wildlifeBridge } from './wildlife';
+import { chalet, fox, hare, iceRink, skiSlope, sledHill, snowbank, snowFort, snowman, snowPine } from './winterProps';
 
 /**
  * Low-poly, toy-like prop library. All models are original, built from primitives:
@@ -34,7 +35,9 @@ export type PartAnim =
   /** Slowly drives forwards and backs along a circular arc, turning with the path. */
   | { type: 'maneuver'; radius: number; angle: number; period: number }
   /** An animal walking back and forth over a flat wildlife overpass, turning at the ends. */
-  | { type: 'crossing'; span: number; period: number };
+  | { type: 'crossing'; span: number; period: number }
+  /** Follows an ellipse, facing the direction of travel (ice skaters). */
+  | { type: 'orbit'; radius: [number, number]; period: number };
 
 export interface PartModel {
   /** Geometry in part-local space (pivot at the origin). */
@@ -993,6 +996,16 @@ const BUILDERS: Record<PropKind, () => PropModel> = {
   bighorn: () => wildlife('bighorn'),
   wolf: () => wildlife('wolf'),
   wildlifeBridge,
+  snowPine,
+  chalet,
+  snowman,
+  skiSlope,
+  iceRink,
+  sledHill,
+  snowFort,
+  snowbank,
+  fox,
+  hare,
   fence,
   barn,
   silo,

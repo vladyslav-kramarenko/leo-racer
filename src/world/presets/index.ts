@@ -3,10 +3,11 @@ import { construction } from './construction';
 import { farm } from './farm';
 import { nature } from './nature';
 import { seaToSky } from './seaToSky';
+import { winter } from './winter';
 import type { WorldPreset } from './types';
 
 const PRESETS: Record<string, WorldPreset> = Object.fromEntries(
-  [construction, seaToSky, nature, farm, city].map((p) => [p.id, p]),
+  [construction, seaToSky, nature, winter, farm, city].map((p) => [p.id, p]),
 );
 
 export const DEFAULT_WORLD_ID = construction.id;
@@ -63,6 +64,10 @@ export function validatePreset(preset: WorldPreset): string[] {
     if (rail.intervalSec[0] <= 0 || rail.intervalSec[1] < rail.intervalSec[0]) errors.push('freightRailway.intervalSec must be a positive [min, max]');
   }
   if (!preset.traffic) errors.push('traffic is required');
+  if (preset.snowfall && (!Number.isInteger(preset.snowfall.count) || preset.snowfall.count < 1
+    || preset.snowfall.count > 1000 || !Number.isFinite(preset.snowfall.speed) || preset.snowfall.speed <= 0)) {
+    errors.push('snowfall needs 1–1000 flakes and a positive speed');
+  }
   if (preset.traffic?.enabled && !preset.traffic.vehicles.length) errors.push('traffic.vehicles must not be empty');
   if (!preset.audio?.ambience) errors.push('audio.ambience is required');
   return errors;
