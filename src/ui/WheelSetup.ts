@@ -218,12 +218,14 @@ export function createWheelSetupScreen(
       tick();
     };
 
-    const startGearButtons = (cal: WheelCalibration) => {
+    const startGearButtons = (cal: WheelCalibration, secondary = false) => {
+      const other = secondary ? (cal.gearButtons ?? { up: 5, down: 4 }) : cal.secondaryGearButtons;
       const capture = (direction: 'up' | 'down', up?: number) => {
         stop();
         clear(body);
         const status = h('p', { class: 'hint' });
         body.append(
+          h('p', { class: 'hint' }, `Gear button set ${secondary ? 2 : 1}`),
           h('p', { class: 'prompt' }, direction === 'up' ? 'Press the wheel button for GEAR UP.' : 'Release it, then press the wheel button for GEAR DOWN.'),
           h('p', { class: 'hint' }, 'Use two different buttons or the two directions of your sequential shifter.'),
           status,
@@ -239,13 +241,18 @@ export function createWheelSetupScreen(
             const pressed = previous ? pad.buttons.findIndex((value, index) => value && !previous![index]) : -1;
             previous = pad.buttons.slice();
             if (pressed >= 0) {
+              if (pressed === (direction === 'up' ? other?.down : other?.up)) {
+                status.textContent = 'This button shifts in the opposite direction in the other set. Choose another button.';
+                raf = requestAnimationFrame(tick);
+                return;
+              }
               if (direction === 'up') {
                 capture('down', pressed);
                 return;
               }
               if (pressed === up) status.textContent = 'Choose a different button for gear down.';
               else {
-                const final: WheelCalibration = { ...cal, gearButtons: { up: up!, down: pressed } };
+                const final: WheelCalibration = { ...cal, [secondary ? 'secondaryGearButtons' : 'gearButtons']: { up: up!, down: pressed } };
                 onSave(final);
                 showDone(final);
                 return;
@@ -274,6 +281,9 @@ export function createWheelSetupScreen(
         throttleStatus,
         hapticStatus,
         h('p', { class: 'hint' }, `Gear up: button ${cal.gearButtons?.up ?? 5}; gear down: button ${cal.gearButtons?.down ?? 4}. These buttons change gear instead of honking.`),
+        h('p', { class: 'hint' }, cal.secondaryGearButtons
+          ? `Set 2: gear up: button ${cal.secondaryGearButtons.up}; gear down: button ${cal.secondaryGearButtons.down}. Both sets are active.`
+          : 'Set 2: not assigned. Add another pair to use paddles and a sequential shifter together.'),
       );
       setFooter(
         h('button', { type: 'button', class: 'menu-button primary', onclick: back }, 'Done'),
@@ -281,6 +291,12 @@ export function createWheelSetupScreen(
         h('button', { type: 'button', class: 'menu-button', onclick: () => startPedal(cal) }, 'Calibrate brake pedal'),
         h('button', { type: 'button', class: 'menu-button', onclick: () => startPedal(cal, 'throttle') }, 'Calibrate accelerator pedal'),
         h('button', { type: 'button', class: 'menu-button', onclick: () => startGearButtons(cal) }, 'Assign gear buttons'),
+        h('button', { type: 'button', class: 'menu-button', onclick: () => startGearButtons(cal, true) }, 'Assign gear buttons — set 2'),
+        ...(cal.secondaryGearButtons ? [h('button', { type: 'button', class: 'menu-button', onclick: () => {
+          const final = { ...cal, secondaryGearButtons: null };
+          onSave(final);
+          showDone(final);
+        } }, 'Remove gear buttons — set 2')] : []),
         h('button', { type: 'button', class: 'menu-button', onclick: () => {
           gamepad.update();
           gamepad.haptics.impact(performance.now());
