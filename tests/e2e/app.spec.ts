@@ -14,6 +14,7 @@ interface LeoState {
   manualSteering: number;
   mode: 'manual' | 'autopilot';
   activeSprites: number;
+  hornPresses: number;
 }
 
 const state = (page: Page) =>
@@ -337,6 +338,31 @@ test('touch brake: pressing the bottom of the screen brakes', async ({ page }) =
   await page.waitForTimeout(300);
   expect((await state(page)).braking).toBe(false);
   await page.mouse.up();
+});
+
+test.describe('mobile touch controls', () => {
+  test.use({ hasTouch: true, viewport: { width: 640, height: 360 } });
+
+  test('tap the road to honk, bottom to brake, reserve parent corner', async ({ page }) => {
+    test.setTimeout(90_000);
+    await startDriving(page);
+    const canvas = page.locator('#game-canvas');
+    const box = (await canvas.boundingBox())!;
+    const x = box.x + box.width / 2;
+    await page.touchscreen.tap(x, box.y + box.height * 0.4);
+    await expect.poll(async () => (await state(page)).hornPresses).toBe(1);
+    expect((await state(page)).braking).toBe(false);
+    await page.touchscreen.tap(x, box.y + box.height * 0.9);
+    expect((await state(page)).hornPresses).toBe(1);
+    await page.touchscreen.tap(20, 20);
+    expect((await state(page)).hornPresses).toBe(1);
+    await openParentMenu(page);
+    await expect(page.getByTestId('parent-menu')).toBeVisible();
+    expect((await state(page)).hornPresses).toBe(1);
+    await page.getByTestId('resume-button').click();
+    await page.touchscreen.tap(x, box.y + box.height * 0.4);
+    await expect.poll(async () => (await state(page)).hornPresses).toBe(2);
+  });
 });
 
 test('world selection persists after reload', async ({ page }) => {

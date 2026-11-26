@@ -79,6 +79,10 @@ export class SessionMetrics {
     this.brakePresses++;
   }
 
+  getHornPresses(): number {
+    return this.hornPresses;
+  }
+
   markHorn(): void {
     this.hornPresses++;
   }

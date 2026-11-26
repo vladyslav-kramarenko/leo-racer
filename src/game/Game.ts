@@ -341,6 +341,7 @@ export class Game {
       mode: this.mixer.getMode(),
       activeSprites: this.sprites.activeCount(),
       traffic: this.traffic.activeCount(),
+      hornPresses: this.metrics.getHornPresses(),
     };
   }
 }

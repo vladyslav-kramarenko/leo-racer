@@ -47,7 +47,7 @@ Leo Racer is a browser driving toy for children aged 2–4.
   - Keyboard steering, brake and horn.
   - Any gamepad or steering wheel via the Gamepad API, with a calibration wizard.
   - Tablet tilt steering.
-  - A big touch brake zone at the bottom of the screen.
+  - A big touch brake zone at the bottom of the screen; tap elsewhere to honk (except the reserved parent-menu corner).
 - **Manual ↔ autopilot:** any steering takes over instantly. Autopilot blends back in after 8 s idle. There are no visible modes.
 - **Haptic feedback:** on controllers exposing browser vibration, a short impulse marks a traffic overlap and gentle repeated pulses mark outward steering at the road boundary. Wheel torque effects require a native bridge; the browser feature is rumble only. Wheel setup has **Test vibration**, and Diagnostics shows its availability.
 - **Built-in traffic:** cars, trucks, tractors and buses drive in their lanes and make way for the school bus. Parents set the density: Off, Low, Normal or Busy.
@@ -80,7 +80,7 @@ The wheel can shift through five forward gears. Defaults are button 5 for up and
 | Child  | Steer                          | `←` `→` / `A` `D`   | Steering axis     | Tilt the tablet like a wheel    |
 | Child  | Brake (hold; release to go on) | `↓` / `S`           | Calibrated brake pedal | Press the bottom of the screen  |
 | Child  | Speed boost (hold)            | `↑` / `W`: 3×       | Accelerator: 1.5×–3× | —                               |
-| Child  | Horn                           | `Space` / `H`       | Any button        | —                               |
+| Child  | Horn                           | `Space` / `H`       | Any button        | Tap above the brake zone (except parent corner) |
 | Parent | Parent Menu                    | Hold `Esc` 2 s      | —                 | Long-press the top-left corner  |
 
 ## Browser support and tested hardware
