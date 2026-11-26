@@ -149,6 +149,10 @@ The public build has no accounts, analytics, ads, AI provider or drawing upload 
 
 Connect the repository to a Worker named `leo-racer` in Cloudflare Workers & Pages. Use production branch `main`, build command `npm run build`, deploy command `npx wrangler deploy`. Do not set `LEO_AI_DEV` or any AI secrets. The default Wrangler config needs no D1 database. Attach the custom domain in the Cloudflare dashboard after deployment. CI runs typecheck, lint, unit tests, production build and browser tests on pull requests.
 
+### Separate development Worker
+
+Connect `dev-leo-racer` to the same repository with production branch `dev`, build command `npm run build`, deploy command `npx wrangler deploy`, and build variable `CLOUDFLARE_ENV=dev`. Set this in Workers Builds, not runtime variables. The `dev` environment in `wrangler.jsonc` targets `dev.racer.kramarenko.info` with workers.dev and preview URLs disabled. Leave `CLOUDFLARE_ENV` unset on the production Worker. Neither public environment uses AI or D1.
+
 ## Testing with families
 
 See [docs/family-testing.md](docs/family-testing.md) for what to observe and how to share diagnostics without personal data.

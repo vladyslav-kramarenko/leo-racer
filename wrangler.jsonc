@@ -3,10 +3,29 @@
   "name": "leo-racer",
   "main": "worker/public.ts",
   "compatibility_date": "2026-09-01",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "assets": {
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": [
+      "/api/*"
+    ]
   },
-  "observability": { "enabled": false }
+  "observability": {
+    "enabled": false
+  },
+  "env": {
+    "dev": {
+      "name": "dev-leo-racer",
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [
+        {
+          "pattern": "dev.racer.kramarenko.info",
+          "custom_domain": true
+        }
+      ]
+    }
+  }
 }
