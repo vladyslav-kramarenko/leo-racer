@@ -22,7 +22,7 @@
       "preview_urls": false,
       "routes": [
         {
-          "pattern": "dev.racer.kramarenko.info",
+          "pattern": "dev.leo-racer.kramarenko.info",
           "custom_domain": true
         }
       ]
