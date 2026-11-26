@@ -147,7 +147,7 @@ The public build has no accounts, analytics, ads, AI provider or drawing upload 
 
 ## Deploying to Cloudflare (public alpha)
 
-Connect the repository to a Worker named `leo-racer` in Cloudflare Workers & Pages. Use production branch `main`, build command `npm run build`, deploy command `npx wrangler deploy`. Do not set `LEO_AI_DEV` or any AI secrets. The default Wrangler config needs no D1 database. Attach the custom domain in the Cloudflare dashboard after deployment. CI runs typecheck, lint, unit tests, production build and browser tests on pull requests.
+Connect the repository to a Worker named `leo-racer` in Cloudflare Workers & Pages. Use production branch `main`, build command `npm run build`, deploy command `npx wrangler deploy`. Do not set `LEO_AI_DEV` or any AI secrets. The default Wrangler config needs no D1 database. Attach the production custom domain `leo-racer.kramarenko.info` in the Cloudflare dashboard after deployment. CI runs typecheck, lint, unit tests, production build and browser tests on pull requests.
 
 ### Separate development Worker
 
