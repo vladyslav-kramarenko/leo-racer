@@ -1,5 +1,5 @@
 import type { AmbientEvent, AudioPreset } from '../world/presets/types';
-import { HORNS } from './horns';
+import { DEFAULT_HORN, HORNS, normalizeHorn } from './horns';
 
 /** Engine loudness at cruise. Kept low so the bus hums gently instead of droning. */
 const ENGINE_GAIN = 0.055;
@@ -181,16 +181,18 @@ export class AudioManager {
     this.engineGain.gain.setTargetAtTime(ENGINE_GAIN * Math.max(0, Math.min(1, level)), this.ctx.currentTime, 0.6);
   }
 
-  horn(variant = 0): void {
+  horn(variant = DEFAULT_HORN): void {
     const ctx = this.ctx;
     if (!ctx || !this.master || !this.enabled) return;
     const now = ctx.currentTime;
-    const index = Number.isInteger(variant) && variant >= 0 && variant < HORNS.length ? variant : 0;
+    const index = normalizeHorn(variant);
     if (now < this.hornUntil[index]) return;
     const sound = HORNS[index];
-    this.hornUntil[index] = now + (sound.notes.length - 1) * sound.spacing + sound.decay + 0.05;
+    const hold = 'hold' in sound ? sound.hold : 0;
+    const attack = 'attack' in sound ? sound.attack : 0.015;
+    this.hornUntil[index] = now + (sound.notes.length - 1) * sound.spacing + attack + hold + sound.decay + 0.05;
     sound.notes.forEach((freqs, note) => {
-      tone(ctx, this.master!, now + note * sound.spacing, sound.type, [...freqs], 0.22, 0.015, sound.decay, sound.cutoff);
+      tone(ctx, this.master!, now + note * sound.spacing, sound.type, [...freqs], 0.22, attack, sound.decay, sound.cutoff, hold);
     });
   }
 
@@ -381,6 +383,7 @@ function tone(
   attack: number,
   decay: number,
   lowpass?: number,
+  hold = 0,
 ): void {
   for (const f of freqs) {
     const osc = ctx.createOscillator();
@@ -392,7 +395,7 @@ function tone(
       lp.frequency.value = lowpass;
       node = node.connect(lp);
     }
-    envelope(ctx, osc, out, at, peak / freqs.length, attack, decay, node);
+    envelope(ctx, osc, out, at, peak / freqs.length, attack, decay, node, hold);
   }
 }
 
@@ -405,14 +408,16 @@ function envelope(
   attack: number,
   decay: number,
   from: AudioNode = osc,
+  hold = 0,
 ): void {
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.0001, at);
   g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), at + attack);
-  g.gain.exponentialRampToValueAtTime(0.0001, at + attack + decay);
+  if (hold > 0) g.gain.setValueAtTime(Math.max(0.0002, peak), at + attack + hold);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + attack + hold + decay);
   from.connect(g).connect(out);
   osc.start(at);
-  osc.stop(at + attack + decay + 0.05);
+  osc.stop(at + attack + hold + decay + 0.05);
 }
 
 function createWhiteNoise(ctx: AudioContext, seconds: number): AudioBuffer {

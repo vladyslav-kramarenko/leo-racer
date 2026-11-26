@@ -1,3 +1,4 @@
+import { DEFAULT_HORN, normalizeHorn } from '../audio/horns';
 import { CONFIG } from '../game/config';
 import { GamepadInput } from './GamepadInput';
 import { KeyboardInput } from './KeyboardInput';
@@ -16,6 +17,7 @@ export class InputManager implements SteeringInput {
   readonly tilt = new TiltInput();
   readonly touchBrake = new TouchBrake();
 
+  private defaultHorn = DEFAULT_HORN;
   private source: InputSource = 'none';
   private lastGamepad = 0;
   private tiltAnchor = 0;
@@ -37,10 +39,15 @@ export class InputManager implements SteeringInput {
     this.gamepad.setCalibration(cal);
   }
 
+  setDefaultHorn(variant: number): void {
+    this.defaultHorn = normalizeHorn(variant);
+    this.keyboard.setDefaultHorn(this.defaultHorn);
+  }
+
   onHorn(listener: (variant: number) => void): void {
     this.keyboard.onHorn((variant) => { this.used.add('keyboard'); listener(variant); });
     this.gamepad.onHorn((variant) => { this.used.add('gamepad'); listener(variant); });
-    this.touchBrake.onHorn(() => { this.used.add('touch'); listener(0); });
+    this.touchBrake.onHorn(() => { this.used.add('touch'); listener(this.defaultHorn); });
   }
 
   onShift(listener: (direction: -1 | 1) => void): void {

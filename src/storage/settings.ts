@@ -1,3 +1,4 @@
+import { DEFAULT_HORN, normalizeHorn } from '../audio/horns';
 import type { WheelCalibration } from '../input/SteeringState';
 import type { TrafficDensity } from '../traffic/TrafficManager';
 
@@ -5,6 +6,7 @@ export interface Settings {
   /** Version 2 separates the original coastal Nature into Sea to Sky. */
   worldCatalogVersion: number;
   soundOn: boolean;
+  defaultHorn: number;
   worldId: string;
   calibration: WheelCalibration | null;
   /** Shared alpha access code for the AI endpoint (entered by a parent). */
@@ -24,6 +26,7 @@ const INSTALLATION_KEY = 'leo.installationId';
 const DEFAULTS: Settings = {
   worldCatalogVersion: 2,
   soundOn: true,
+  defaultHorn: DEFAULT_HORN,
   worldId: 'construction',
   calibration: null,
   alphaToken: '',
@@ -55,6 +58,7 @@ export function loadSettings(): Settings {
     if (!raw) return { ...DEFAULTS, calibration: defaultCalibration };
     const parsed = JSON.parse(raw) as Partial<Settings>;
     return { ...DEFAULTS, ...parsed, worldCatalogVersion: 2,
+      defaultHorn: normalizeHorn(parsed.defaultHorn),
       worldId: parsed.worldId === 'nature' && (parsed.worldCatalogVersion ?? 1) < 2 ? 'sea-to-sky' : parsed.worldId ?? DEFAULTS.worldId,
       calibration: mergeCalibration(parsed.calibration ?? defaultCalibration, defaultCalibration) };
   } catch {
@@ -70,7 +74,7 @@ function mergeCalibration(cal: WheelCalibration | null, previous: WheelCalibrati
 
 export function saveSettings(patch: Partial<Settings>): Settings {
   const previous = loadSettings();
-  const next = { ...previous, ...patch };
+  const next = { ...previous, ...patch, defaultHorn: normalizeHorn(patch.defaultHorn ?? previous.defaultHorn) };
   if (patch.calibration !== undefined) next.calibration = mergeCalibration(patch.calibration, previous.calibration);
   const store = storage();
   try {

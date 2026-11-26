@@ -1,3 +1,4 @@
+import { DEFAULT_HORN, normalizeHorn } from '../audio/horns';
 import { CONFIG } from '../game/config';
 import { approach, type SteeringInput } from './SteeringState';
 
@@ -54,6 +55,7 @@ const HORN_CODES = new Set(['Space', 'KeyH']);
 export class KeyboardInput implements SteeringInput {
   readonly steering: KeyboardSteering;
   private readonly pressed = new Set<string>();
+  private defaultHorn = DEFAULT_HORN;
   private hornListener: ((variant: number) => void) | null = null;
   private shiftListener: ((direction: -1 | 1) => void) | null = null;
   /** Set whenever a steering key goes down; consumed by InputManager. */
@@ -80,7 +82,7 @@ export class KeyboardInput implements SteeringInput {
         this.pressed.add(e.code);
       } else if (HORN_CODES.has(e.code) || /^(Digit|Numpad)[1-6]$/.test(e.code)) {
         e.preventDefault();
-        if (!e.repeat) this.hornListener?.(HORN_CODES.has(e.code) ? 0 : Number(e.code.slice(-1)) - 1);
+        if (!e.repeat) this.hornListener?.(HORN_CODES.has(e.code) ? this.defaultHorn : Number(e.code.slice(-1)) - 1);
       }
     };
     const up = (e: KeyboardEvent) => {
@@ -98,6 +100,10 @@ export class KeyboardInput implements SteeringInput {
       target.removeEventListener('keyup', up);
       target.removeEventListener('blur', blur);
     };
+  }
+
+  setDefaultHorn(variant: number): void {
+    this.defaultHorn = normalizeHorn(variant);
   }
 
   onHorn(listener: (variant: number) => void): void {

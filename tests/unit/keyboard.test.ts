@@ -1,3 +1,4 @@
+import { DEFAULT_HORN } from '../../src/audio/horns';
 import { describe, expect, it, vi } from 'vitest';
 import { KeyboardInput, KeyboardSteering } from '../../src/input/KeyboardInput';
 
@@ -26,6 +27,28 @@ it('uses separate Shift keys for gears once per press and resets held keys on bl
     detach();
     key('keydown', 'ShiftRight');
     expect(shift).toHaveBeenCalledTimes(3);
+  } finally {
+    detach();
+    vi.unstubAllGlobals();
+  }
+});
+
+it('uses the configured horn for Space/H and preserves direct numeric horn keys', () => {
+  vi.stubGlobal('HTMLElement', class {});
+  const target = new EventTarget();
+  const input = new KeyboardInput();
+  const horn = vi.fn();
+  input.onHorn(horn);
+  const detach = input.attach(target as unknown as Window);
+  const press = (code: string, repeat = false) =>
+    target.dispatchEvent(Object.assign(new Event('keydown', { cancelable: true }), { code, repeat }));
+  try {
+    press('Space');
+    input.setDefaultHorn(2);
+    press('KeyH');
+    press('Space', true);
+    press('Digit1');
+    expect(horn.mock.calls).toEqual([[DEFAULT_HORN], [2], [0]]);
   } finally {
     detach();
     vi.unstubAllGlobals();

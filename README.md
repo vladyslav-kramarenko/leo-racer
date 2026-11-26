@@ -48,6 +48,7 @@ Leo Racer is a browser driving toy for children aged 2–4.
   - Any gamepad or steering wheel via the Gamepad API, with a calibration wizard.
   - Tablet tilt steering.
   - A big touch brake zone at the bottom of the screen; tap elsewhere to honk (except the reserved parent-menu corner).
+  - Parent Menu → Play → Default horn selects and previews the horn for touch and Space/H. The new two-tone Bus horn is the default; the original six wheel and number-key sounds remain unchanged.
 - **Manual ↔ autopilot:** any steering takes over instantly. Autopilot blends back in after 8 s idle. There are no visible modes.
 - **Haptic feedback:** on controllers exposing browser vibration, a short impulse marks a traffic overlap and gentle repeated pulses mark outward steering at the road boundary. Wheel torque effects require a native bridge; the browser feature is rumble only. Wheel setup has **Test vibration**, and Diagnostics shows its availability.
 - **Built-in traffic:** cars, trucks, tractors and buses drive in their lanes and make way for the school bus. Parents set the density: Off, Low, Normal or Busy.

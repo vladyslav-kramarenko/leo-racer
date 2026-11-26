@@ -365,6 +365,22 @@ test.describe('mobile touch controls', () => {
   });
 });
 
+test('parent can select and preview a default horn and the choice persists', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 640, height: 360 });
+  await startDriving(page);
+  await openParentMenu(page);
+  const horn = page.getByTestId('horn-select');
+  await expect(horn.locator('option:checked')).toHaveText('Bus horn');
+  await horn.selectOption({ label: 'Truck' });
+  await page.getByTestId('preview-horn-button').click();
+  expect((await state(page)).hornPresses).toBe(0);
+  await page.reload();
+  await page.getByTestId('start-button').click();
+  await openParentMenu(page);
+  await expect(horn.locator('option:checked')).toHaveText('Truck');
+});
+
 test('world selection persists after reload', async ({ page }) => {
   await startDriving(page);
   expect((await state(page)).world).toBe('construction');

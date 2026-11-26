@@ -1,3 +1,4 @@
+import { DEFAULT_HORN } from '../../src/audio/horns';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WheelCalibration } from '../../src/input/SteeringState';
 import { loadSettings, saveSettings } from '../../src/storage/settings';
@@ -43,6 +44,17 @@ describe('saved pedal defaults', () => {
     expect(loadSettings().worldCatalogVersion).toBe(2);
     saveSettings({ soundOn: true });
     expect(loadSettings().worldId).toBe('nature');
+  });
+
+  it('defaults to the bus horn and preserves valid choices across reloads', () => {
+    expect(loadSettings().defaultHorn).toBe(DEFAULT_HORN);
+    saveSettings({ defaultHorn: 0 });
+    saveSettings({ soundOn: false });
+    expect(loadSettings().defaultHorn).toBe(0);
+    saveSettings({ defaultHorn: 999 });
+    expect(loadSettings().defaultHorn).toBe(DEFAULT_HORN);
+    values.set('leo.settings', JSON.stringify({ defaultHorn: '2' }));
+    expect(loadSettings().defaultHorn).toBe(DEFAULT_HORN);
   });
 
   it('restores both pedals after loading and changing unrelated settings', () => {
