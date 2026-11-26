@@ -151,7 +151,7 @@ Connect the repository to a Worker named `leo-racer` in Cloudflare Workers & Pag
 
 ### Separate development Worker
 
-Connect `dev-leo-racer` to the same repository with production branch `dev`, build command `npm run build`, deploy command `npx wrangler deploy`, and build variable `CLOUDFLARE_ENV=dev`. Set this in Workers Builds, not runtime variables. The `dev` environment in `wrangler.jsonc` targets `dev.leo-racer.kramarenko.info` with workers.dev and preview URLs disabled. Leave `CLOUDFLARE_ENV` unset on the production Worker. Neither public environment uses AI or D1.
+Connect `dev-leo-racer` to the same repository with production branch `dev`, build command `npm run build`, deploy command `npx wrangler deploy`, and build variable `CLOUDFLARE_ENV=dev`. Set this in Workers Builds, not runtime variables. The `dev` environment in `wrangler.jsonc` targets `dev.leo-racer.kramarenko.info` with workers.dev and preview URLs disabled. Leave `CLOUDFLARE_ENV` unset on the production Worker. Neither public environment uses AI or D1. The production HTML is indexable; the DEV and local development HTML retain `noindex, nofollow`. Both use the production canonical URL and social preview metadata.
 
 ## Testing with families
 
