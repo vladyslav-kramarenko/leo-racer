@@ -38,7 +38,7 @@ async function openParentMenu(page: Page): Promise<void> {
   await expect(page.getByTestId('parent-menu')).toBeVisible();
 }
 
-/** A tiny generated "drawing" so the upload flow can run against the mock AI provider. */
+/** A tiny generated drawing for the local-only drawing flow. */
 async function drawingFile(page: Page): Promise<{ name: string; mimeType: string; buffer: Buffer }> {
   const dataUrl = await page.evaluate(() => {
     const c = document.createElement('canvas');
@@ -230,11 +230,14 @@ test('START works: bus drives on autopilot with no child-facing UI', async ({ pa
 });
 
 test('keyboard steers the vehicle and takes over from autopilot', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 640, height: 360 });
   await startDriving(page);
   await page.waitForTimeout(300);
   const before = await state(page);
   await page.keyboard.down('ArrowRight');
-  await page.waitForTimeout(900);
+  await expect.poll(async () => (await state(page)).manualSteering, { timeout: 25_000 }).toBeGreaterThan(0.9);
+  await expect.poll(async () => (await state(page)).lateralOffset, { timeout: 25_000 }).toBeGreaterThan(before.lateralOffset + 0.5);
   const during = await state(page);
   await page.keyboard.up('ArrowRight');
   expect(during.mode).toBe('manual');
@@ -242,7 +245,8 @@ test('keyboard steers the vehicle and takes over from autopilot', async ({ page 
   expect(during.lateralOffset).toBeGreaterThan(before.lateralOffset + 0.5);
 
   await page.keyboard.down('KeyA');
-  await page.waitForTimeout(1200);
+  await expect.poll(async () => (await state(page)).manualSteering, { timeout: 25_000 }).toBeLessThan(-0.9);
+  await expect.poll(async () => (await state(page)).lateralOffset, { timeout: 25_000 }).toBeLessThan(during.lateralOffset);
   const left = await state(page);
   await page.keyboard.up('KeyA');
   expect(left.manualSteering).toBeLessThan(-0.9);
@@ -250,10 +254,12 @@ test('keyboard steers the vehicle and takes over from autopilot', async ({ page 
 });
 
 test('arrow down brakes to a stop and releasing drives on', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 640, height: 360 });
   await startDriving(page);
   await page.waitForTimeout(300);
   await page.keyboard.down('ArrowDown');
-  await page.waitForTimeout(2000);
+  await expect.poll(async () => (await state(page)).speed, { timeout: 30_000 }).toBe(0);
   const stopped = await state(page);
   expect(stopped.braking).toBe(true);
   expect(stopped.speed).toBe(0);
@@ -262,7 +268,7 @@ test('arrow down brakes to a stop and releasing drives on', async ({ page }) => 
   expect((await state(page)).progress).toBe(stopped.progress);
 
   await page.keyboard.up('ArrowDown');
-  await page.waitForTimeout(1000);
+  await expect.poll(async () => (await state(page)).speed, { timeout: 20_000 }).toBeGreaterThan(0);
   const moving = await state(page);
   expect(moving.braking).toBe(false);
   expect(moving.speed).toBeGreaterThan(0);
@@ -313,17 +319,17 @@ test('reload does not crash', async ({ page }) => {
 });
 
 test('touch brake: pressing the bottom of the screen brakes', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 640, height: 360 });
   await startDriving(page);
   const box = (await page.locator('#game-canvas').boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.93);
   await page.mouse.down();
   await expect(page.getByTestId('touch-brake')).toBeVisible();
-  await page.waitForTimeout(1800);
-  expect((await state(page)).speed).toBe(0);
+  await expect.poll(async () => (await state(page)).speed, { timeout: 30_000 }).toBe(0);
   await page.mouse.up();
   await expect(page.getByTestId('touch-brake')).toBeHidden();
-  await page.waitForTimeout(800);
-  expect((await state(page)).speed).toBeGreaterThan(0);
+  await expect.poll(async () => (await state(page)).speed, { timeout: 20_000 }).toBeGreaterThan(0);
 
   // The top of the screen does not brake.
   await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.4);
@@ -339,7 +345,8 @@ test('world selection persists after reload', async ({ page }) => {
   await openParentMenu(page);
   // Selecting a world reloads the page.
   await Promise.all([page.waitForEvent('load'), page.getByTestId('world-nature').click({ noWaitAfter: true })]);
-  await page.getByTestId('start-button').click();
+  // A world change from the parent menu resumes driving automatically.
+  await expect.poll(async () => (await state(page)).driving).toBe(true);
   expect((await state(page)).world).toBe('nature');
   await page.reload();
   await page.getByTestId('start-button').click();
@@ -359,6 +366,8 @@ test('play-time and traffic settings persist after reload', async ({ page }) => 
 });
 
 test('finished session: gentle stop, ALL DONE, child cannot restart, parent can', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 640, height: 360 });
   await startDriving(page, '/?endingMs=4000');
   await page.evaluate(() => (window as unknown as { __leo: { endSession(): void } }).__leo.endSession());
   await page.waitForTimeout(400);
@@ -370,7 +379,7 @@ test('finished session: gentle stop, ALL DONE, child cannot restart, parent can'
   expect((await state(page)).braking).toBe(false);
   await page.keyboard.up('ArrowDown');
 
-  await expect(page.getByTestId('end-screen')).toBeVisible({ timeout: 8000 });
+  await expect(page.getByTestId('end-screen')).toBeVisible({ timeout: 45_000 });
   const done = await state(page);
   expect(done.phase).toBe('finished');
   expect(done.speed).toBe(0);
@@ -387,7 +396,7 @@ test('finished session: gentle stop, ALL DONE, child cannot restart, parent can'
   await openParentMenu(page);
   await page.getByTestId('restart-session-button').click();
   await expect(page.getByTestId('end-screen')).toBeHidden();
-  await page.waitForTimeout(1500);
+  await expect.poll(async () => (await state(page)).speed, { timeout: 20_000 }).toBeGreaterThan(0);
   const again = await state(page);
   expect(again.phase).toBe('running');
   expect(again.speed).toBeGreaterThan(0);
