@@ -59,6 +59,10 @@ test('page loads with the start screen', async ({ page }) => {
   const errors = trackErrors(page);
   await page.goto('/');
   await expect(page.getByText('LEO RACER')).toBeVisible();
+  await expect(page).toHaveTitle('Leo Racer – Free Driving Game for Toddlers');
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://leo-racer.kramarenko.info/');
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', 'https://leo-racer.kramarenko.info/images/leo-racer-share.jpg');
   const mascot = page.getByTestId('leo-mascot');
   await expect(mascot).toBeVisible();
   await expect.poll(() => mascot.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);

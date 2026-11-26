@@ -145,13 +145,17 @@ Details: [docs/architecture.md](docs/architecture.md) · [docs/ai-processing.md]
 
 The public build has no accounts, analytics, ads, AI provider or drawing upload endpoint. Drawings are resized and stored locally in IndexedDB and can be deleted from Manage Drawings. The optional AI development build is separate and must not be enabled in public deployments.
 
+**Privacy-first by design.** Because Leo Racer is intended for young children, Google Analytics (GA4), advertising trackers and visitor-level tracking are intentionally excluded. The game does not need analytics to function. Any future audience measurement should be aggregate, avoid persistent visitor identifiers, and be reviewed for child-privacy requirements before enabling it. Cloudflare Web Analytics is a candidate, not an enabled feature.
+
+[Play Leo Racer](https://leo-racer.kramarenko.info/) · An independent project by [Vladyslav Kramarenko](https://kramarenko.info/).
+
 ## Deploying to Cloudflare (public alpha)
 
 Connect the repository to a Worker named `leo-racer` in Cloudflare Workers & Pages. Use production branch `main`, build command `npm run build`, deploy command `npx wrangler deploy`. Do not set `LEO_AI_DEV` or any AI secrets. The default Wrangler config needs no D1 database. Attach the production custom domain `leo-racer.kramarenko.info` in the Cloudflare dashboard after deployment. CI runs typecheck, lint, unit tests, production build and browser tests on pull requests.
 
 ### Separate development Worker
 
-Connect `dev-leo-racer` to the same repository with production branch `dev`, build command `npm run build`, deploy command `npx wrangler deploy`, and build variable `CLOUDFLARE_ENV=dev`. Set this in Workers Builds, not runtime variables. The `dev` environment in `wrangler.jsonc` targets `dev.leo-racer.kramarenko.info` with workers.dev and preview URLs disabled. Leave `CLOUDFLARE_ENV` unset on the production Worker. Neither public environment uses AI or D1.
+Connect `dev-leo-racer` to the same repository with production branch `dev`, build command `npm run build`, deploy command `npx wrangler deploy`, and build variable `CLOUDFLARE_ENV=dev`. Set this in Workers Builds, not runtime variables. The `dev` environment in `wrangler.jsonc` targets `dev.leo-racer.kramarenko.info` with workers.dev and preview URLs disabled. Leave `CLOUDFLARE_ENV` unset on the production Worker. Neither public environment uses AI or D1. The production HTML is indexable; the DEV and local development HTML retain `noindex, nofollow`. Both use the production canonical URL and social preview metadata.
 
 ## Testing with families
 
