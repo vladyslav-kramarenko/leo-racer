@@ -19,13 +19,12 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test
+      - run: npm run build
 
-  # Browser tests: on main only and non-blocking until their runtime is acceptable.
+  # Browser tests must pass on pull requests before a public release.
   e2e:
-    if: github.event_name == 'push'
     needs: check
     runs-on: ubuntu-latest
-    continue-on-error: true
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
