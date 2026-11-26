@@ -59,6 +59,9 @@ test('page loads with the start screen', async ({ page }) => {
   const errors = trackErrors(page);
   await page.goto('/');
   await expect(page.getByText('LEO RACER')).toBeVisible();
+  const mascot = page.getByTestId('leo-mascot');
+  await expect(mascot).toBeVisible();
+  await expect.poll(() => mascot.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
   await expect(page.getByTestId('start-button')).toHaveText('START DRIVING');
   await expect(page.locator('#game-canvas')).toBeVisible();
   expect(errors).toEqual([]);

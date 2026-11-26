@@ -23,7 +23,13 @@ export class StartScreen {
       'div',
       { class: 'start-screen', 'data-testid': 'start-screen' },
       h('section', { class: 'start-worlds' }, createWorldPicker(picker.worlds, picker.currentId, picker.onSelect)),
-      h('div', { class: 'start-content' }, h('h1', { class: 'title' }, 'LEO RACER'), start, fullscreen),
+      h('div', { class: 'start-content' },
+        h('div', { class: 'start-brand' },
+          h('img', { class: 'leo-mascot', src: '/images/leo-mascot.webp', alt: '', width: 320, height: 213, 'data-testid': 'leo-mascot', draggable: 'false' }),
+          h('h1', { class: 'title' }, 'LEO RACER'),
+        ),
+        start, fullscreen,
+      ),
     );
   }
 
