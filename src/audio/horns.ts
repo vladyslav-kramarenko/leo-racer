@@ -5,4 +5,13 @@ export const HORNS = [
   { name: 'Happy melody', type: 'triangle', notes: [[392], [494], [587], [784]], spacing: 0.15, decay: 0.18, cutoff: 2000 },
   { name: 'High-low', type: 'square', notes: [[659], [440], [659], [440]], spacing: 0.18, decay: 0.17, cutoff: 1400 },
   { name: 'Cartoon toot', type: 'triangle', notes: [[523, 659], [392, 494], [262, 330]], spacing: 0.2, decay: 0.25, cutoff: 1500 },
+  // Appended to preserve the original six physical-wheel and numeric-key mappings.
+  { name: 'Bus horn', type: 'sawtooth', notes: [[294, 370]], spacing: 0, decay: 0.14, cutoff: 950, hold: 0.18, attack: 0.025 },
 ] as const;
+
+export const DEFAULT_HORN = 6;
+
+export function normalizeHorn(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < HORNS.length
+    ? value : DEFAULT_HORN;
+}

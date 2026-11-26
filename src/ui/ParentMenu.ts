@@ -1,3 +1,4 @@
+import { HORNS } from '../audio/horns';
 import { CONFIG } from '../game/config';
 import { PLAY_TIME_OPTIONS, playTimeLabel, type SessionPhase } from '../session/SessionState';
 import { TRAFFIC_DENSITIES, type TrafficDensity } from '../traffic/TrafficManager';
@@ -11,6 +12,9 @@ export interface ParentMenuHost {
   resume(): void;
   isSoundOn(): boolean;
   setSound(on: boolean): void;
+  defaultHorn(): number;
+  setDefaultHorn(variant: number): void;
+  previewHorn(): void;
   isFullscreen(): boolean;
   toggleFullscreen(): void;
   isDiagnosticsVisible(): boolean;
@@ -150,6 +154,10 @@ export class ParentMenu {
     }
     traffic.addEventListener('change', () => host.setTrafficDensity(traffic.value as TrafficDensity));
 
+    const horn = h('select', { class: 'select', 'data-testid': 'horn-select', 'aria-label': 'Default horn' });
+    HORNS.forEach((sound, index) => horn.append(h('option', { value: String(index), selected: index === host.defaultHorn() }, sound.name)));
+    horn.addEventListener('change', () => host.setDefaultHorn(Number(horn.value)));
+
     // --- Tilt
     const tiltStatus = h('span', { class: 'hint' });
     const tiltButton = h('button', { type: 'button', class: 'toggle', 'data-testid': 'tilt-toggle' });
@@ -204,6 +212,9 @@ export class ParentMenu {
         row('Play time', playTime),
         row('Traffic', traffic),
         row('Sound', toggle(() => host.isSoundOn(), (v) => host.setSound(v), ['On', 'Off'], 'sound-toggle')),
+        row('Default horn', horn),
+        button('Preview horn', () => host.previewHorn(), 'preview-horn-button'),
+        h('p', { class: 'hint' }, 'Used for touch and Space/H. Preview respects Sound On/Off.'),
         row(
           'Fullscreen',
           h('button', { type: 'button', class: 'toggle', onclick: () => host.toggleFullscreen() }, host.isFullscreen() ? 'Exit' : 'Enter'),

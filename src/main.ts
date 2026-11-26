@@ -53,6 +53,7 @@ async function main(): Promise<void> {
     return;
   }
   game.setCalibration(settings.calibration);
+  game.input.setDefaultHorn(settings.defaultHorn);
   game.input.tilt.setInverted(settings.tiltInvert);
   game.boot();
 
@@ -134,6 +135,15 @@ async function main(): Promise<void> {
       setSound: (on) => {
         settings = saveSettings({ soundOn: on });
         audio.setEnabled(on);
+      },
+      defaultHorn: () => settings.defaultHorn,
+      setDefaultHorn: (variant) => {
+        settings = saveSettings({ defaultHorn: variant });
+        game.input.setDefaultHorn(settings.defaultHorn);
+      },
+      previewHorn: () => {
+        audio.start(preset.audio);
+        audio.horn(settings.defaultHorn);
       },
       isFullscreen: () => !!document.fullscreenElement,
       toggleFullscreen: () => void toggleFullscreen(),
