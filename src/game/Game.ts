@@ -314,7 +314,6 @@ export class Game {
       worldChunks: this.world.chunks.activeIndices().join(','),
       activeSprites: this.sprites.activeCount(),
       traffic: this.traffic.activeCount(),
-      hornPresses: this.metrics.getHornPresses(),
       drawCalls: this.scenes.drawCalls(),
       triangles: this.scenes.triangles(),
       appVersion: __APP_VERSION__,
@@ -342,6 +341,7 @@ export class Game {
       mode: this.mixer.getMode(),
       activeSprites: this.sprites.activeCount(),
       traffic: this.traffic.activeCount(),
+      hornPresses: this.metrics.getHornPresses(),
     };
   }
 }
