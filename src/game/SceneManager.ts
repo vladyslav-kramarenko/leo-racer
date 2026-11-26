@@ -28,6 +28,10 @@ export class SceneManager {
     return this.renderer.info.render.calls;
   }
 
+  triangles(): number {
+    return this.renderer.info.render.triangles;
+  }
+
   resolution(): { width: number; height: number } {
     const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
     return { width: size.x, height: size.y };

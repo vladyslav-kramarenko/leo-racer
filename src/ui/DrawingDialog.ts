@@ -1,9 +1,29 @@
 import { ACCEPTED_TYPES, preprocessImage, requestProcessing } from '../drawings/DrawingProcessor';
 import type { DrawingManager } from '../drawings/DrawingManager';
+import type { DrawingFrequency } from '../drawings/DrawingSprite';
 import { effectiveCanMove, type CustomAsset } from '../drawings/DrawingStorage';
 import { getInstallationId, loadSettings, saveSettings } from '../storage/settings';
 import { clear, h } from './dom';
 import type { Screen } from './ParentMenu';
+
+/** Rare / Normal / Often — no numeric spawn rates for parents. */
+function frequencyControl(initial: DrawingFrequency, onChange: (f: DrawingFrequency) => void): HTMLElement {
+  const options: [DrawingFrequency, string][] = [
+    ['rare', 'Rare'],
+    ['normal', 'Normal'],
+    ['often', 'Often'],
+  ];
+  const buttons = options.map(([value, label]) => {
+    const b = h('button', { type: 'button', class: 'segment small', 'data-testid': `frequency-${value}` }, label);
+    b.addEventListener('click', () => {
+      buttons.forEach((x, i) => x.classList.toggle('active', options[i][0] === value));
+      onChange(value);
+    });
+    b.classList.toggle('active', value === initial);
+    return b;
+  });
+  return h('div', { class: 'segmented' }, ...buttons);
+}
 
 /** MOVES / STAYS segmented control. AI classification is only a suggestion. */
 function movesToggle(initial: boolean, onChange: (moves: boolean) => void): HTMLElement {
@@ -38,7 +58,7 @@ export function createAddDrawingScreen(drawings: DrawingManager): Screen {
     const body = h('div', { class: 'dialog-body' });
     panel.append(
       h('h2', {}, 'Add Drawing'),
-      h('p', { class: 'hint' }, 'Take a photo of a drawing (JPEG, PNG or WebP). It is resized on this device before upload.'),
+      h('p', { class: 'hint' }, __LEO_AI_ENABLED__ ? 'Take a photo of a drawing (JPEG, PNG or WebP). It is resized on this device before upload.' : 'Choose a drawing (JPEG, PNG or WebP). It stays on this device.'),
       body,
       h('button', { type: 'button', class: 'menu-button', onclick: back }, 'Back'),
     );
@@ -64,7 +84,7 @@ export function createAddDrawingScreen(drawings: DrawingManager): Screen {
       });
       body.append(
         h('label', { class: 'file-label' }, h('span', { class: 'menu-button primary' }, 'Choose image…'), input),
-        h('label', { class: 'field' }, h('span', {}, 'AI access code'), token),
+        ...(__LEO_AI_ENABLED__ ? [h('label', { class: 'field' }, h('span', {}, 'AI access code'), token)] : []),
       );
     };
 
@@ -90,6 +110,12 @@ export function createAddDrawingScreen(drawings: DrawingManager): Screen {
         clear(body);
         body.append(h('p', { class: 'error' }, 'This image could not be read. Please try another one.'));
         body.append(h('button', { type: 'button', class: 'menu-button', onclick: showPicker }, 'Choose another'));
+        return;
+      }
+      if (disposed) return;
+      if (!__LEO_AI_ENABLED__) {
+        const asset = await drawings.add({ image: resized, canMove: false, confidence: null, source: 'original' });
+        if (!disposed) showDone(asset);
         return;
       }
       await process(resized);
@@ -119,7 +145,7 @@ export function createAddDrawingScreen(drawings: DrawingManager): Screen {
         h(
           'div',
           { class: 'button-row' },
-          result.reason !== 'quota'
+          result.reason !== 'quota' && result.reason !== 'globalLimit'
             ? h('button', { type: 'button', class: 'menu-button primary', onclick: () => process(resized) }, 'TRY AGAIN')
             : null,
           h(
@@ -195,6 +221,7 @@ export function createManageDrawingsScreen(drawings: DrawingManager): Screen {
               'div',
               { class: 'drawing-controls' },
               movesToggle(effectiveCanMove(asset), (moves) => void drawings.setMoves(asset.id, moves)),
+              frequencyControl(asset.frequency ?? 'normal', (f) => void drawings.setFrequency(asset.id, f)),
               h('span', { class: 'hint' }, asset.source === 'ai' ? 'AI cleaned' : 'Original'),
               del,
             ),

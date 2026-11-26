@@ -1,12 +1,94 @@
-# Leo Racer — MVP Alpha
+# Leo Racer
 
-A browser driving toy for children aged 2–4. The yellow school bus is always driving.
-The child can take the wheel (keyboard or a real steering wheel) at any moment and cannot fail.
-After 8 seconds without steering, autopilot smoothly takes over again.
-Parents can add a child's drawing, which appears in the world as a static or moving object.
+> **A little driving world for little drivers.**
+> Drive. Draw. Watch your world come alive.
 
-- **Stack:** TypeScript, Vite, Three.js, Cloudflare Workers + Static Assets + D1, IndexedDB, Vitest, Playwright. No React.
-- **Spec:** [task.md](task.md). **Architecture:** [docs/architecture.md](docs/architecture.md).
+> ⚠️ **Public alpha.** Expect rough edges. AI processing is disabled in the public build; drawings stay on your device.
+
+Leo Racer is a browser driving toy for children aged 2–4.
+
+- **Always moving:** the yellow school bus is always driving.
+- **Instant control:** the child takes the wheel at any moment, with keyboard, a real steering wheel, or a tablet tilted like a wheel.
+- **Can't fail:** there are no crashes, no game over and no way off the road.
+- **Autopilot:** when the child lets go, autopilot gently takes over again.
+- **Drawings:** parents can photograph a child's drawing, and it shows up in the world, standing by the road or driving along it.
+
+**Works with a keyboard or a real steering wheel. No hardware required.**
+
+| Construction | Sea to Sky |
+| --- | --- |
+| ![Construction world](docs/images/construction.jpg) | ![Sea to Sky world](docs/images/nature.jpg) |
+| **Farm** | **City** |
+| ![Autumn Farm world](public/worlds/farm.jpg) | ![Night City world](public/worlds/city.jpg) |
+
+**Nature — a Banff-inspired forest with wildlife overpasses.**
+
+![Nature forest world](public/worlds/nature-forest.jpg)
+
+**Winter — a ski village with snowy firs, chairlifts, skiers, a skating pond and chalets.**
+
+![Winter ski village](public/worlds/winter.jpg)
+
+| Brake: the tail lights flash | Gentle end of a timed session |
+| --- | --- |
+| ![Braking](docs/images/brake.jpg) | ![All done screen](docs/images/all-done.jpg) |
+
+## Features
+
+- **Six worlds:** Construction, Sea to Sky, Nature, Winter, Farm and City. All are endless and pure data presets on one engine. Props are animated: cranes turn, windmills spin, traffic lights cycle.
+  Sea to Sky has the sea, snowy mountains, a gondola and a historical steam freight train. Nature is a forest with wild animals and wildlife overpasses.
+  Winter has falling snow, a moving chairlift and skiers, ice skaters with hockey goals, a sled hill, warm chalet windows and chimney smoke, snowmen, snow forts, foxes and white hares. Snowplows and pickups carrying skis drive along the cleared road.
+  Santa occasionally flies across the road in a red sleigh with four galloping reindeer and a stack of gifts, waving to the bus.
+  Farm is an autumn harvest world: pumpkin patches with bunting and scarecrows, roadside produce stands, golden corn, fallen leaves and orange/red trees alongside barns, hay bales, cows and sheep.
+  A yellow utility biplane with a spinning propeller occasionally flies across the Farm road above the fields.
+  A harvest tractor pulls three open wagons of visitors around a dirt oval beside the road, with hay bales, pumpkins and autumn bunting.
+  City is Vancouver-inspired at night: a moon and stars over the seawall, glowing tower windows, neon shop fronts, warm street lamps, bus headlights and illuminated SkyTrain windows. Cherry blossoms and simplified landmarks retain their toy silhouettes.
+- **Many inputs:**
+  - Keyboard steering, brake and horn.
+  - Any gamepad or steering wheel via the Gamepad API, with a calibration wizard.
+  - Tablet tilt steering.
+  - A big touch brake zone at the bottom of the screen.
+- **Manual ↔ autopilot:** any steering takes over instantly. Autopilot blends back in after 8 s idle. There are no visible modes.
+- **Haptic feedback:** on controllers exposing browser vibration, a short impulse marks a traffic overlap and gentle repeated pulses mark outward steering at the road boundary. Wheel torque effects require a native bridge; the browser feature is rumble only. Wheel setup has **Test vibration**, and Diagnostics shows its availability.
+- **Built-in traffic:** cars, trucks, tractors and buses drive in their lanes and make way for the school bus. Parents set the density: Off, Low, Normal or Busy.
+  - **Police:** a police SUV with a red/blue light bar flashing at 1.5 Hz (below the 3 Hz photosensitivity limit) drives in Sea to Sky and City.
+  - **Sports car:** an 80s wedge supercar zooms past the bus on the Sea to Sky highway and drives calmly in City.
+- **Draw Your World:** the photo is resized and its metadata stripped on the device. Parents choose MOVES or STAYS. Optional AI cleanup is available only in explicitly enabled development builds.
+  - A drawing that STAYS stands by the road.
+  - A drawing that MOVES drives in a lane or alongside the road.
+  - Each drawing has a frequency: Rare, Normal or Often.
+- **Play-time limit:** Unlimited, or 5, 10, 15, 20 or 30 min. At the limit, the bus pulls over and stops softly, the engine fades, and the screen says "ALL DONE!". Only a parent can start another session.
+- **Parent Menu:** hold `Esc` for 2 s or long-press the top-left corner. It has drawings, wheel calibration, tilt, play time, traffic, world, sound, fullscreen, diagnostics with export, and the privacy note.
+- **Local-only diagnostics:** nothing is sent anywhere.
+
+## Controls
+
+Hold `↑` / `W` for **3× cruising speed**. The calibrated accelerator pedal varies the multiplier linearly from **1.5× to 3×** over its active travel (the first 10% ignores jitter). Pressing the accelerator produces a distinct rising engine sound. Release to return smoothly to normal speed. Braking takes priority. Configure pedals in Parent Menu → Calibrate Wheel → Calibrate brake pedal / Calibrate accelerator pedal.
+
+The wheel can shift through five forward gears. Defaults are button 5 for up and button 4 for down (Gamepad API indices); use **Calibrate Wheel → Assign gear buttons** to bind your paddles or sequential shifter. A press shifts once, holding does not repeat, and shift buttons do not honk. Gear 3 is the default and preserves the original cruise speed. Gas multiplies the selected gear's base speed; braking still takes priority.
+
+| Gear | Base speed multiplier | Engine pitch multiplier |
+| --- | --- | --- |
+| 1 | 0.65 | 1.45 |
+| 2 | 0.85 | 1.20 |
+| 3 | 1.00 | 1.00 |
+| 4 | 1.20 | 0.84 |
+| 5 | 1.45 | 0.72 |
+
+| Who    | Action                         | Keyboard            | Wheel / gamepad   | Tablet                          |
+| ------ | ------------------------------ | ------------------- | ----------------- | ------------------------------- |
+| Child  | Steer                          | `←` `→` / `A` `D`   | Steering axis     | Tilt the tablet like a wheel    |
+| Child  | Brake (hold; release to go on) | `↓` / `S`           | Calibrated brake pedal | Press the bottom of the screen  |
+| Child  | Speed boost (hold)            | `↑` / `W`: 3×       | Accelerator: 1.5×–3× | —                               |
+| Child  | Horn                           | `Space` / `H`       | Any button        | —                               |
+| Parent | Parent Menu                    | Hold `Esc` 2 s      | —                 | Long-press the top-left corner  |
+
+## Browser support and tested hardware
+
+- **Browsers:** current Chrome, Edge, Firefox and Safari, desktop and tablet. WebGL is required.
+- **Primary device:** Surface Book 3 with a Chromium-based browser.
+- **Steering wheel:** tested with a **Logitech MOMO Racing**. Other wheels and gamepads work through the generic Gamepad API plus calibration. See [docs/hardware-testing.md](docs/hardware-testing.md).
+- **Tablet tilt:** uses the DeviceOrientation API. iOS asks for motion permission when START is pressed.
 
 ## Quick start
 
@@ -14,32 +96,16 @@ Requires **Node.js 22.13+** (24 LTS recommended; see `.nvmrc`).
 
 ```bash
 npm install
-npx wrangler d1 migrations apply leo-racer-alpha --local   # once: local quota table
-npm run dev                                                # http://localhost:5173
+npm run dev                 # http://localhost:5173
 ```
 
-Local development uses the **mock** AI provider. It returns the image unchanged with a pseudo-random `canMove`.
-No API key is needed, and no alpha token is required while the provider is `mock`.
-To try a real provider, copy `.dev.vars.example` to `.dev.vars` and fill it in.
-
-## Controls
-
-| Who    | Action                                   | Input                                     |
-| ------ | ---------------------------------------- | ----------------------------------------- |
-| Child  | Steer                                    | `←` `→` or `A` `D`, or a steering wheel / gamepad |
-| Child  | Brake (hold); tail lights flash, release to drive on | `↓` / `S`                    |
-| Child  | Horn                                     | `Space` / `H`, or any wheel button        |
-| Parent | Parent Menu                              | Hold `Esc` ~2 s, or press and hold the top-left corner |
-
-The Parent Menu covers: Add / Manage Drawings, Calibrate Wheel, World, Sound, Fullscreen, Diagnostics (overlay and export), and the privacy note.
-Add `?debug` to the URL in dev mode to show the diagnostics overlay immediately.
-
-## Scripts
+The default development and production builds use local drawings only. For isolated AI development, run `npm run db:migrate:local` and `npm run dev:ai` (uses `wrangler.ai-dev.jsonc` and the mock provider by default). Never set `LEO_AI_DEV=1` in the public build.
+In dev mode, `?debug` shows the diagnostics overlay.
 
 | Script               | What it does                                           |
 | -------------------- | ------------------------------------------------------ |
 | `npm run dev`        | Vite dev server with the Worker running locally (Cloudflare Vite plugin) |
-| `npm run build`      | Typecheck + production build (`dist/client`, `dist/leo_racer_alpha`) |
+| `npm run build`      | Typecheck + production build                           |
 | `npm run preview`    | Build and preview the production bundle locally        |
 | `npm run typecheck`  | `tsc -b` for app, worker and tooling                   |
 | `npm run lint`       | ESLint                                                 |
@@ -47,36 +113,51 @@ Add `?debug` to the URL in dev mode to show the diagnostics overlay immediately.
 | `npm run test:e2e`   | Playwright browser tests (run `npx playwright install chromium` once) |
 | `npm run deploy`     | Build and `wrangler deploy`                            |
 
-## Deploying to Cloudflare (alpha)
+## Architecture
 
-1. Create the D1 database and copy the printed `database_id` into [wrangler.jsonc](wrangler.jsonc):
-   ```bash
-   npx wrangler d1 create leo-racer-alpha
-   npm run db:migrate:remote
-   ```
-2. Set secrets. They are Worker-side only and never go in `VITE_*` variables:
-   ```bash
-   npx wrangler secret put ALPHA_ACCESS_TOKEN   # shared code you give to alpha testers
-   npx wrangler secret put AI_API_KEY           # only when AI_PROVIDER=openai
-   ```
-   `AI_PROVIDER` and `AI_MONTHLY_LIMIT` are plain vars in `wrangler.jsonc`, or can be set in the dashboard.
-3. Connect the private GitHub repo in **Cloudflare dashboard → Workers & Pages → leo-racer-alpha → Settings → Builds**:
-   - Build command: `npm run build`
-   - Deploy command: `npx wrangler deploy`
-   - Non-production branch deploy command: `npx wrangler versions upload`. This gives each PR a preview URL.
-   - Production branch: `main`
+```mermaid
+flowchart LR
+  subgraph DRIVE
+    K[Keyboard] --> IM[InputManager<br/>steering -1..1 · brake · horn]
+    G[Gamepad / wheel] --> IM
+    T[Tablet tilt] --> IM
+    TB[Touch brake] --> IM
+    IM --> MX[SteeringMixer<br/>manual ↔ autopilot]
+    AP[Autopilot] --> MX
+    MX --> VC[VehicleController<br/>soft + hard lane limits]
+  end
+  subgraph WORLD
+    P[World preset data] --> WM[WorldManager<br/>road · chunks · props · bands]
+    TR[TrafficManager]
+  end
+  subgraph CREATE
+    D[Photo] --> PP[Resize + strip EXIF] --> DM[DrawingManager<br/>IndexedDB] --> SP[Drawing sprites]
+  end
+  S[SessionManager<br/>play-time limit] --> MX
+  VC --> WM
+```
 
-After that, merging to `main` builds and deploys automatically ([spec §42](task.md)).
-[.github/workflows/ci.yml](.github/workflows/ci.yml) runs typecheck, lint and unit tests on every PR.
-
-## Implementation gate
-
-The spec says **not to start AI work until M1–M3 have been tested with a real child and a real Logitech MOMO**.
-The AI path is implemented behind a provider abstraction, but it defaults to `mock`.
-Switch `AI_PROVIDER` to `openai` only after that gate is passed. See [docs/hardware-testing.md](docs/hardware-testing.md).
+The game core is fully client-side. If the network, the AI service or D1 fails, driving keeps working.
+Details: [docs/architecture.md](docs/architecture.md) · [docs/ai-processing.md](docs/ai-processing.md).
 
 ## Privacy
 
-No accounts, analytics, ads or child data. Drawings live only in the browser (IndexedDB).
-The AI endpoint receives a resized, metadata-free copy of a drawing, passes it to the AI provider, and returns the result without storing it.
-D1 stores only `(installation_id, period, used)` for the monthly quota. See [docs/ai-processing.md](docs/ai-processing.md).
+The public build has no accounts, analytics, ads, AI provider or drawing upload endpoint. Drawings are resized and stored locally in IndexedDB and can be deleted from Manage Drawings. The optional AI development build is separate and must not be enabled in public deployments.
+
+## Deploying to Cloudflare (public alpha)
+
+Connect the repository to a Worker named `leo-racer` in Cloudflare Workers & Pages. Use production branch `main`, build command `npm run build`, deploy command `npx wrangler deploy`. Do not set `LEO_AI_DEV` or any AI secrets. The default Wrangler config needs no D1 database. Attach the custom domain in the Cloudflare dashboard after deployment. CI runs typecheck, lint, unit tests, production build and browser tests on pull requests.
+
+## Testing with families
+
+See [docs/family-testing.md](docs/family-testing.md) for what to observe and how to share diagnostics without personal data.
+
+## Roadmap
+
+The next steps are tracked in [leo-racer-post-mvp-roadmap.md](leo-racer-post-mvp-roadmap.md).
+After that come Color Your Vehicle (printable templates), more animation and weather. Phone-to-TV drawing upload comes only once families use drawings regularly.
+
+## License
+
+There is no open-source license yet: all rights reserved.
+Third-party components are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). All 3D models, textures and sounds are original and procedurally generated.

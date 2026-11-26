@@ -8,6 +8,9 @@ export interface AutopilotInput {
   lateralVelocity: number;
   /** Signed road curvature ahead (1/m, positive = curving right). */
   curvatureAhead: number;
+  /** 0 = normal driving, 1 = fully pulled over to `pullOverOffset` (session ending). */
+  pullOver?: number;
+  pullOverOffset?: number;
 }
 
 type AutopilotConfig = typeof CONFIG.autopilot;
@@ -38,7 +41,9 @@ export class Autopilot {
   }
 
   getSteering(input: AutopilotInput): number {
-    const target = this.targetOffset(input.timeSec, input.curvatureAhead);
+    const pull = clamp(input.pullOver ?? 0, 0, 1);
+    const wander = this.targetOffset(input.timeSec, input.curvatureAhead);
+    const target = wander + ((input.pullOverOffset ?? 0) - wander) * pull;
     const error = target - input.lateralOffset;
     const raw = clamp(
       this.cfg.gain * error - this.cfg.damping * input.lateralVelocity,

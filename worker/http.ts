@@ -26,3 +26,13 @@ export function safeEqual(a: string, b: string): boolean {
 export function currentPeriod(now: Date = new Date()): string {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
 }
+
+/** Current UTC day, e.g. "2026-10-02". */
+export function currentDay(now: Date = new Date()): string {
+  return now.toISOString().slice(0, 10);
+}
+
+/** Current UTC minute bucket, e.g. "2026-10-02T14:05". */
+export function currentMinute(now: Date = new Date()): string {
+  return now.toISOString().slice(0, 16);
+}

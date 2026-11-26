@@ -2,7 +2,7 @@
   "name": "leo-racer",
   "version": "0.1.0",
   "private": true,
-  "description": "Leo Racer \u2014 a browser driving toy for young children",
+  "description": "Leo Racer — a browser driving toy for young children",
   "type": "module",
   "engines": {
     "node": ">=22.13.0"
@@ -17,9 +17,10 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "deploy": "npm run build && wrangler deploy",
-    "db:migrate:local": "wrangler d1 migrations apply leo-racer-alpha --local",
-    "db:migrate:remote": "wrangler d1 migrations apply leo-racer-alpha --remote",
-    "cf-typegen": "wrangler types worker/worker-configuration.d.ts"
+    "db:migrate:local": "wrangler d1 migrations apply leo-racer-alpha --local --config wrangler.ai-dev.jsonc",
+    "db:migrate:remote": "wrangler d1 migrations apply leo-racer-alpha --remote --config wrangler.ai-dev.jsonc",
+    "cf-typegen": "wrangler types worker/worker-configuration.d.ts",
+    "dev:ai": "LEO_AI_DEV=1 vite"
   },
   "repository": {
     "type": "git",

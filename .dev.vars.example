@@ -1,6 +1,8 @@
 # Copy to .dev.vars for local development. Never commit .dev.vars.
 AI_PROVIDER=mock
 AI_MONTHLY_LIMIT=20
+AI_GLOBAL_DAILY_LIMIT=200
+AI_RATE_LIMIT_PER_MINUTE=3
 # Required when AI_PROVIDER=openai
 AI_API_KEY=[API_KEY]
 # Shared alpha token; the parent enters it once in Parent Menu → Add Drawing.

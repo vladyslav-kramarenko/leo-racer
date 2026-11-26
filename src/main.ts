@@ -3,14 +3,20 @@ import { AudioManager } from './audio/AudioManager';
 import { DrawingManager } from './drawings/DrawingManager';
 import { effectiveCanMove } from './drawings/DrawingStorage';
 import { Game } from './game/Game';
+import { TiltInput } from './input/TiltInput';
 import { loadSettings, saveSettings } from './storage/settings';
 import { DiagnosticsOverlay } from './ui/DiagnosticsOverlay';
 import { createAddDrawingScreen, createManageDrawingsScreen } from './ui/DrawingDialog';
 import { downloadJson } from './ui/dom';
-import { ParentGesture, ParentMenu } from './ui/ParentMenu';
+import { EndScreen } from './ui/EndScreen';
+import { GearIndicator } from './ui/GearIndicator';
+import { ParentGesture, ParentMenu, type TiltStatus } from './ui/ParentMenu';
 import { StartScreen } from './ui/StartScreen';
+import { TouchBrakeIndicator } from './ui/TouchBrakeIndicator';
 import { createWheelSetupScreen } from './ui/WheelSetup';
 import { getPreset, listPresets } from './world/presets';
+
+const WORLD_RESUME_KEY = 'leo.resumeWorld';
 
 function showFatal(root: HTMLElement, message: string): void {
   root.innerHTML = '';
@@ -22,26 +28,40 @@ function showFatal(root: HTMLElement, message: string): void {
 
 async function main(): Promise<void> {
   const root = document.getElementById('app')!;
+  const params = new URLSearchParams(location.search);
   let settings = loadSettings();
   const preset = getPreset(settings.worldId);
+  let resumeWorld = false;
+  try {
+    resumeWorld = sessionStorage.getItem(WORLD_RESUME_KEY) === preset.id;
+    sessionStorage.removeItem(WORLD_RESUME_KEY);
+  } catch { /* Storage may be unavailable. */ }
   const audio = new AudioManager();
   audio.setEnabled(settings.soundOn);
 
   let game: Game;
   try {
-    game = new Game(root, preset, audio);
+    game = new Game(root, preset, audio, {
+      playTimeMinutes: settings.playTimeMinutes,
+      trafficDensity: settings.trafficDensity,
+      // Test hook: shorten the ending sequence in development only.
+      endingDurationMs: import.meta.env.DEV && params.has('endingMs') ? Number(params.get('endingMs')) : undefined,
+    });
   } catch (err) {
     console.error(err);
     showFatal(root, 'Leo Racer needs WebGL. Please try an up-to-date Chrome, Edge or Firefox.');
     return;
   }
   game.setCalibration(settings.calibration);
+  game.input.tilt.setInverted(settings.tiltInvert);
   game.boot();
 
   // CREATE layer → WORLD: drawings become sprite sources.
   const drawings = new DrawingManager();
   drawings.subscribe((assets, added) => {
-    game.setDrawings(assets.map((a) => ({ id: a.id, image: a.processedImage, moves: effectiveCanMove(a) })));
+    game.setDrawings(
+      assets.map((a) => ({ id: a.id, image: a.processedImage, moves: effectiveCanMove(a), frequency: a.frequency ?? 'normal' })),
+    );
     if (added) game.showDrawingSoon(added.id);
   });
   void drawings.load();
@@ -49,17 +69,60 @@ async function main(): Promise<void> {
   const diagnostics = new DiagnosticsOverlay(() => game.getLive());
   diagnostics.mount(root);
 
+  const brakeIndicator = new TouchBrakeIndicator();
+  brakeIndicator.mount(root);
+  game.input.touchBrake.onChange((braking) => brakeIndicator.setVisible(braking));
+
+  const gearIndicator = new GearIndicator();
+  gearIndicator.mount(root);
+  game.onGearChange((gear) => gearIndicator.show(gear));
+
+  const endScreen = new EndScreen();
+  endScreen.mount(root);
+  game.onSessionPhase((phase) => {
+    if (phase !== 'running') gearIndicator.hide();
+    if (phase === 'finished') endScreen.show();
+    else if (phase === 'running') endScreen.hide();
+  });
+
+  // Tilt: automatic on touch-first devices unless the parent decided otherwise.
+  let tiltFailed = false;
+  const wantsTilt = () => settings.tiltEnabled ?? TiltInput.isTouchFirst();
+  const enableTilt = async (): Promise<TiltStatus> => {
+    const ok = await game.input.tilt.enable();
+    tiltFailed = !ok;
+    return ok ? 'on' : 'unavailable';
+  };
+  const tiltStatus = (): TiltStatus => (game.input.tilt.isEnabled() ? 'on' : tiltFailed ? 'unavailable' : 'off');
+
   const collectDiagnostics = () =>
     game.metrics.export({
       drawings: drawings.list().length,
       inputSources: game.input.getUsedSources(),
+      tiltUsed: game.input.getUsedSources().includes('tilt'),
+      touchBrakeUsed: game.input.touchBrake.wasUsed(),
+      takeovers: game.getTakeoverCounts(),
+      sessionPhase: game.session.phase,
+      playTimeMinutes: settings.playTimeMinutes,
+      world: preset.id,
       live: game.getLive(),
       userAgent: navigator.userAgent,
     });
 
+  const selectWorld = (id: string, resume = false) => {
+    if (id === preset.id) return;
+    settings = saveSettings({ worldId: id });
+    if (resume) {
+      try { sessionStorage.setItem(WORLD_RESUME_KEY, id); } catch { /* Keep world selection available. */ }
+    }
+    // Reload to rebuild the world with the selected preset.
+    location.reload();
+  };
+
   const menu = new ParentMenu(
     {
       pause: () => {
+        gearIndicator.hide();
         game.setPaused(true);
         audio.setDucked(true);
       },
@@ -85,36 +148,83 @@ async function main(): Promise<void> {
           return false;
         }
       },
-      worlds: () => listPresets().map((p) => ({ id: p.id, name: p.name })),
+      worlds: () => listPresets().map((p) => ({ id: p.id, name: p.name, thumbnail: p.thumbnail })),
       currentWorld: () => preset.id,
+      selectWorld: (id) => selectWorld(id, true),
       drawingCount: () => drawings.list().length,
+      playTimeMinutes: () => settings.playTimeMinutes,
+      setPlayTimeMinutes: (minutes) => {
+        settings = saveSettings({ playTimeMinutes: minutes });
+        game.setPlayTimeMinutes(minutes);
+      },
+      sessionPhase: () => game.session.phase,
+      startAnotherSession: () => game.restartSession(),
+      trafficDensity: () => settings.trafficDensity,
+      setTrafficDensity: (density) => {
+        settings = saveSettings({ trafficDensity: density });
+        game.setTrafficDensity(density);
+      },
+      tiltStatus,
+      setTiltEnabled: async (enabled) => {
+        settings = saveSettings({ tiltEnabled: enabled });
+        if (!enabled) {
+          game.input.tilt.disable();
+          tiltFailed = false;
+          return 'off';
+        }
+        return enableTilt();
+      },
+      recenterTilt: () => game.input.tilt.recenter(),
+      isTiltInverted: () => settings.tiltInvert,
+      setTiltInverted: (inverted) => {
+        settings = saveSettings({ tiltInvert: inverted });
+        game.input.tilt.setInverted(inverted);
+      },
     },
     {
       addDrawing: createAddDrawingScreen(drawings),
       manageDrawings: createManageDrawingsScreen(drawings),
       calibrateWheel: createWheelSetupScreen(game.input.gamepad, (cal) => {
         settings = saveSettings({ calibration: cal });
-        game.setCalibration(cal);
+        game.setCalibration(settings.calibration);
       }),
     },
   );
   menu.mount(root);
 
-  const start = new StartScreen((fullscreen) => {
+  const startDriving = (fullscreen: boolean) => {
     if (fullscreen) void toggleFullscreen();
     audio.start(preset.audio);
+    // Must run inside the click: iOS only grants motion permission from a user gesture.
+    if (wantsTilt()) void enableTilt();
     game.startDriving();
-    start.hide();
     // Parent gestures only once driving started, so the start screen stays simple.
     new ParentGesture(menu).attach(root);
-  });
-  start.mount(root);
+  };
+  if (resumeWorld) {
+    startDriving(false);
+    // Reload can suspend Web Audio; the next normal input unlocks it without a menu.
+    const unlockAudio = () => {
+      audio.start(preset.audio);
+      if (wantsTilt()) void enableTilt();
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+    window.addEventListener('pointerdown', unlockAudio);
+    window.addEventListener('keydown', unlockAudio);
+  } else {
+    const start = new StartScreen((fullscreen) => {
+      startDriving(fullscreen);
+      start.hide();
+    }, { worlds: listPresets(), currentId: preset.id, onSelect: selectWorld });
+    start.mount(root);
+  }
 
-  const params = new URLSearchParams(location.search);
   if (import.meta.env.DEV) {
     (window as unknown as { __leo: unknown }).__leo = {
       state: () => game.debugState(),
       live: () => game.getLive(),
+      endSession: () => game.beginEndingSequence(),
     };
     if (params.has('debug')) diagnostics.setVisible(true);
   }

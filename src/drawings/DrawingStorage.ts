@@ -1,4 +1,5 @@
 import { STORE_CUSTOM_ASSETS, withStore } from '../storage/database';
+import type { DrawingFrequency } from './DrawingSprite';
 
 export const CUSTOM_ASSET_VERSION = 1;
 
@@ -14,6 +15,8 @@ export interface CustomAsset {
   version: number;
   confidence: number | null;
   source: 'ai' | 'original';
+  /** How often it appears in the world. Missing on older records = 'normal'. */
+  frequency?: DrawingFrequency;
 }
 
 export function effectiveCanMove(asset: Pick<CustomAsset, 'canMove' | 'manualOverride'>): boolean {

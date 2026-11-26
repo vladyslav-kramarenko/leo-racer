@@ -47,13 +47,15 @@ export class KeyboardSteering implements SteeringInput {
 const LEFT_CODES = new Set(['ArrowLeft', 'KeyA']);
 const RIGHT_CODES = new Set(['ArrowRight', 'KeyD']);
 const BRAKE_CODES = new Set(['ArrowDown', 'KeyS']);
+const THROTTLE_CODES = new Set(['ArrowUp', 'KeyW']);
 const HORN_CODES = new Set(['Space', 'KeyH']);
 
 /** Binds DOM keyboard events to a KeyboardSteering model. */
 export class KeyboardInput implements SteeringInput {
   readonly steering: KeyboardSteering;
   private readonly pressed = new Set<string>();
-  private hornListener: (() => void) | null = null;
+  private hornListener: ((variant: number) => void) | null = null;
+  private shiftListener: ((direction: -1 | 1) => void) | null = null;
   /** Set whenever a steering key goes down; consumed by InputManager. */
   private keyEvent = false;
 
@@ -69,12 +71,16 @@ export class KeyboardInput implements SteeringInput {
         if (!e.repeat) this.keyEvent = true;
         this.pressed.add(e.code);
         this.sync();
-      } else if (BRAKE_CODES.has(e.code)) {
+      } else if (BRAKE_CODES.has(e.code) || THROTTLE_CODES.has(e.code)) {
         e.preventDefault();
         this.pressed.add(e.code);
-      } else if (HORN_CODES.has(e.code) && !e.repeat) {
+      } else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
         e.preventDefault();
-        this.hornListener?.();
+        if (!e.repeat && !this.pressed.has(e.code)) this.shiftListener?.(e.code === 'ShiftLeft' ? -1 : 1);
+        this.pressed.add(e.code);
+      } else if (HORN_CODES.has(e.code) || /^(Digit|Numpad)[1-6]$/.test(e.code)) {
+        e.preventDefault();
+        if (!e.repeat) this.hornListener?.(HORN_CODES.has(e.code) ? 0 : Number(e.code.slice(-1)) - 1);
       }
     };
     const up = (e: KeyboardEvent) => {
@@ -94,8 +100,12 @@ export class KeyboardInput implements SteeringInput {
     };
   }
 
-  onHorn(listener: () => void): void {
+  onHorn(listener: (variant: number) => void): void {
     this.hornListener = listener;
+  }
+
+  onShift(listener: (direction: -1 | 1) => void): void {
+    this.shiftListener = listener;
   }
 
   consumeKeyEvent(): boolean {
@@ -114,6 +124,10 @@ export class KeyboardInput implements SteeringInput {
 
   isBraking(): boolean {
     return [...BRAKE_CODES].some((c) => this.pressed.has(c));
+  }
+
+  isAccelerating(): boolean {
+    return [...THROTTLE_CODES].some((c) => this.pressed.has(c));
   }
 
   getSteering(): number {

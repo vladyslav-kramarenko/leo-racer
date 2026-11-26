@@ -1,5 +1,10 @@
 import { CONFIG } from '../game/config';
+import { PLAY_TIME_OPTIONS, playTimeLabel, type SessionPhase } from '../session/SessionState';
+import { TRAFFIC_DENSITIES, type TrafficDensity } from '../traffic/TrafficManager';
 import { clear, h } from './dom';
+import { createWorldPicker } from './WorldPicker';
+
+export type TiltStatus = 'on' | 'off' | 'unavailable';
 
 export interface ParentMenuHost {
   pause(): void;
@@ -12,9 +17,22 @@ export interface ParentMenuHost {
   setDiagnosticsVisible(visible: boolean): void;
   exportDiagnostics(): void;
   copyDiagnostics(): Promise<boolean>;
-  worlds(): { id: string; name: string }[];
+  worlds(): { id: string; name: string; thumbnail?: string }[];
   currentWorld(): string;
+  /** Saves the choice and reloads the page (no hot-swapping of 3D resources). */
+  selectWorld(id: string): void;
   drawingCount(): number;
+  playTimeMinutes(): number | null;
+  setPlayTimeMinutes(minutes: number | null): void;
+  sessionPhase(): SessionPhase;
+  startAnotherSession(): void;
+  trafficDensity(): TrafficDensity;
+  setTrafficDensity(density: TrafficDensity): void;
+  tiltStatus(): TiltStatus;
+  setTiltEnabled(enabled: boolean): Promise<TiltStatus>;
+  recenterTilt(): void;
+  isTiltInverted(): boolean;
+  setTiltInverted(inverted: boolean): void;
 }
 
 /** A sub-screen renders into the panel and returns an optional cleanup function. */
@@ -26,7 +44,9 @@ export interface ParentMenuScreens {
   calibrateWheel: Screen;
 }
 
-export const PRIVACY_NOTE =
+export const PRIVACY_NOTE = !__LEO_AI_ENABLED__
+  ? 'No accounts, ads or analytics. Drawings are resized and stored in this browser only; they are not uploaded. You can delete them in Manage Drawings. AI processing is disabled in this public release.'
+  :
   'Leo Racer collects no child data: no names, ages, photos, video, microphone or location. ' +
   'Drawings are stored only in this browser. A drawing sent for AI processing is resized and stripped of ' +
   'photo metadata first, then temporarily transmitted through the Leo Racer server to the AI service; ' +
@@ -102,44 +122,60 @@ export class ParentMenu {
     const button = (label: string, onClick: () => void, testId?: string, extraClass = '') =>
       h('button', { type: 'button', class: `menu-button ${extraClass}`, 'data-testid': testId, onclick: onClick }, label);
 
-    const soundToggle = h(
-      'button',
-      { type: 'button', class: 'toggle', 'aria-pressed': String(host.isSoundOn()), 'data-testid': 'sound-toggle' },
-      host.isSoundOn() ? 'On' : 'Off',
-    );
-    soundToggle.addEventListener('click', () => {
-      const next = !host.isSoundOn();
-      host.setSound(next);
-      soundToggle.textContent = next ? 'On' : 'Off';
-      soundToggle.setAttribute('aria-pressed', String(next));
-    });
+    const toggle = (get: () => boolean, set: (v: boolean) => void, labels: [string, string], testId?: string) => {
+      const el = h('button', { type: 'button', class: 'toggle', 'aria-pressed': String(get()), 'data-testid': testId }, get() ? labels[0] : labels[1]);
+      el.addEventListener('click', () => {
+        const next = !get();
+        set(next);
+        el.textContent = next ? labels[0] : labels[1];
+        el.setAttribute('aria-pressed', String(next));
+      });
+      return el;
+    };
 
-    const diagToggle = h(
-      'button',
-      { type: 'button', class: 'toggle', 'aria-pressed': String(host.isDiagnosticsVisible()) },
-      host.isDiagnosticsVisible() ? 'Shown' : 'Hidden',
-    );
-    diagToggle.addEventListener('click', () => {
-      const next = !host.isDiagnosticsVisible();
-      host.setDiagnosticsVisible(next);
-      diagToggle.textContent = next ? 'Shown' : 'Hidden';
-      diagToggle.setAttribute('aria-pressed', String(next));
-    });
+    const row = (label: string, control: HTMLElement) => h('div', { class: 'row' }, h('span', {}, label), control);
+
+    // --- Session
+    const phase = host.sessionPhase();
+    const finished = phase === 'ending' || phase === 'finished';
+    const playTime = h('select', { class: 'select', 'data-testid': 'play-time-select' });
+    for (const minutes of PLAY_TIME_OPTIONS) {
+      playTime.append(h('option', { value: minutes === null ? '' : String(minutes), selected: minutes === host.playTimeMinutes() }, playTimeLabel(minutes)));
+    }
+    playTime.addEventListener('change', () => host.setPlayTimeMinutes(playTime.value === '' ? null : Number(playTime.value)));
+
+    const traffic = h('select', { class: 'select', 'data-testid': 'traffic-select' });
+    for (const density of TRAFFIC_DENSITIES) {
+      traffic.append(h('option', { value: density, selected: density === host.trafficDensity() }, density[0].toUpperCase() + density.slice(1)));
+    }
+    traffic.addEventListener('change', () => host.setTrafficDensity(traffic.value as TrafficDensity));
+
+    // --- Tilt
+    const tiltStatus = h('span', { class: 'hint' });
+    const tiltButton = h('button', { type: 'button', class: 'toggle', 'data-testid': 'tilt-toggle' });
+    const renderTilt = (status: TiltStatus) => {
+      tiltButton.textContent = status === 'on' ? 'On' : 'Off';
+      tiltButton.setAttribute('aria-pressed', String(status === 'on'));
+      tiltStatus.textContent = status === 'unavailable' ? 'Tilt is not available on this device or was not allowed.' : '';
+    };
+    renderTilt(host.tiltStatus());
+    tiltButton.addEventListener('click', async () => renderTilt(await host.setTiltEnabled(host.tiltStatus() !== 'on')));
+
+    const worlds = createWorldPicker(host.worlds(), host.currentWorld(), (id) => host.selectWorld(id));
 
     const copyStatus = h('span', { class: 'hint' });
-    const worlds = host.worlds().map((w) =>
-      h(
-        'label',
-        { class: 'radio' },
-        h('input', { type: 'radio', name: 'world', value: w.id, checked: w.id === host.currentWorld() }),
-        ' ',
-        w.name,
-      ),
-    );
 
     this.panel.append(
       h('h2', {}, 'Parent Menu'),
-      button('Resume', () => this.close(), 'resume-button', 'primary'),
+      ...(finished
+        ? [
+            button('Start another session', () => {
+              host.startAnotherSession();
+              this.close();
+            }, 'restart-session-button', 'primary'),
+            button('Resume', () => this.close(), 'resume-button'),
+          ]
+        : [button('Resume', () => this.close(), 'resume-button', 'primary')]),
       h(
         'section',
         {},
@@ -150,30 +186,41 @@ export class ParentMenu {
       h(
         'section',
         {},
-        h('h3', {}, 'Steering wheel'),
+        h('h3', {}, 'Steering'),
         button('Calibrate Wheel', () => this.show(this.screens.calibrateWheel), 'calibrate-button'),
+        row('Tilt steering (tablet)', tiltButton),
+        tiltStatus,
+        h(
+          'div',
+          { class: 'button-row' },
+          button('Recenter Tilt Steering', () => host.recenterTilt(), 'recenter-tilt'),
+        ),
+        row('Invert tilt', toggle(() => host.isTiltInverted(), (v) => host.setTiltInverted(v), ['Yes', 'No'])),
       ),
-      h('section', {}, h('h3', {}, 'World'), ...worlds),
       h(
         'section',
         { class: 'row-section' },
-        h('div', { class: 'row' }, h('span', {}, 'Sound'), soundToggle),
-        h(
-          'div',
-          { class: 'row' },
-          h('span', {}, 'Fullscreen'),
-          h(
-            'button',
-            { type: 'button', class: 'toggle', onclick: () => host.toggleFullscreen() },
-            host.isFullscreen() ? 'Exit' : 'Enter',
-          ),
+        h('h3', {}, 'Play'),
+        row('Play time', playTime),
+        row('Traffic', traffic),
+        row('Sound', toggle(() => host.isSoundOn(), (v) => host.setSound(v), ['On', 'Off'], 'sound-toggle')),
+        row(
+          'Fullscreen',
+          h('button', { type: 'button', class: 'toggle', onclick: () => host.toggleFullscreen() }, host.isFullscreen() ? 'Exit' : 'Enter'),
         ),
       ),
       h(
         'section',
         {},
+        h('h3', {}, 'World'),
+        worlds,
+      h('p', { class: 'hint' }, 'Tap a world to switch and start driving there.'),
+      ),
+      h(
+        'section',
+        {},
         h('h3', {}, 'Diagnostics'),
-        h('div', { class: 'row' }, h('span', {}, 'Overlay'), diagToggle),
+        row('Overlay', toggle(() => host.isDiagnosticsVisible(), (v) => host.setDiagnosticsVisible(v), ['Shown', 'Hidden'])),
         h(
           'div',
           { class: 'button-row' },
@@ -187,7 +234,7 @@ export class ParentMenu {
       h('section', {}, h('h3', {}, 'Privacy'), h('p', { class: 'privacy' }, PRIVACY_NOTE)),
       h('p', { class: 'hint' }, `Leo Racer ${__APP_VERSION__} · Hold ESC for 2 seconds to open this menu.`),
     );
-    this.panel.querySelector<HTMLButtonElement>('[data-testid="resume-button"]')?.focus();
+    this.panel.querySelector<HTMLButtonElement>('.menu-button.primary')?.focus();
   }
 }
 

@@ -3,6 +3,7 @@ import type { WorldPreset } from './types';
 export const construction: WorldPreset = {
   id: 'construction',
   name: 'Construction',
+  thumbnail: '/worlds/construction.jpg',
   sky: {
     top: '#5fb4ff',
     horizon: '#d9f0ff',
@@ -14,7 +15,7 @@ export const construction: WorldPreset = {
     hemiSky: '#cfeaff',
     hemiGround: '#b98b53',
     hemiIntensity: 1.3,
-    hillColors: ['#9ccf6a', '#86bf5a', '#b4d97c'],
+    hills: { colors: ['#9ccf6a', '#86bf5a', '#b4d97c'], height: [14, 36], width: [26, 52] },
   },
   terrain: {
     base: '#d9b273',
@@ -36,16 +37,24 @@ export const construction: WorldPreset = {
     perChunk: [3, 6],
     shoulderCones: 4,
     items: [
+      { kind: 'pipeTrench', weight: 1, minDistance: 7, maxDistance: 7, scale: [1, 1], maxPerChunk: 1,
+        facing: 'traffic', side: 'left', every: { chunks: 8, offset: 3 } },
+      { kind: 'quarry', weight: 1, minDistance: 13, maxDistance: 13, scale: [1, 1], maxPerChunk: 1,
+        facing: 'road', side: 'right', every: { chunks: 8, offset: 1 } },
       { kind: 'barrier', weight: 3, minDistance: 1.2, maxDistance: 3, scale: [1, 1], maxPerChunk: 3, facing: 'road' },
       { kind: 'concreteBlock', weight: 2, minDistance: 2, maxDistance: 10, scale: [0.9, 1.2], maxPerChunk: 3 },
-      { kind: 'pipes', weight: 2, minDistance: 4, maxDistance: 14, scale: [0.9, 1.2], maxPerChunk: 2 },
+      { kind: 'pipes', weight: 0.8, minDistance: 4, maxDistance: 14, scale: [0.9, 1.2], maxPerChunk: 1 },
       { kind: 'sign', weight: 2, minDistance: 1.3, maxDistance: 2.5, scale: [1, 1], maxPerChunk: 2, facing: 'traffic' },
       { kind: 'gravel', weight: 2, minDistance: 5, maxDistance: 18, scale: [0.8, 1.6], maxPerChunk: 2 },
       { kind: 'excavator', weight: 1.5, minDistance: 7, maxDistance: 18, scale: [1, 1.1], maxPerChunk: 1 },
       { kind: 'dumpTruck', weight: 1.5, minDistance: 7, maxDistance: 18, scale: [1, 1.1], maxPerChunk: 1 },
       { kind: 'crane', weight: 0.8, minDistance: 16, maxDistance: 30, scale: [1, 1.2], maxPerChunk: 1 },
+      { kind: 'unfinishedBuilding', weight: 0.75, minDistance: 13, maxDistance: 22, scale: [0.95, 1.1], maxPerChunk: 1, facing: 'road' },
     ],
   },
-  traffic: { enabled: false },
-  audio: { ambient: 'construction', engineBaseHz: 52 },
+  traffic: { enabled: true, vehicles: ['car', 'pickup', 'dumpTruck', 'mixer', 'van'] },
+  audio: {
+    engineBaseHz: 52,
+    ambience: { noiseLevel: 0.05, noiseCutoff: 700, events: ['clink'], eventInterval: [2.5, 7.5] },
+  },
 };

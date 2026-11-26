@@ -7,7 +7,11 @@ import { Autopilot } from '../driving/Autopilot';
 import { SteeringMixer } from '../driving/SteeringMixer';
 import { VehicleController } from '../driving/VehicleController';
 import { InputManager } from '../input/InputManager';
+import { roadEdgeStrength } from '../input/HapticFeedback';
 import type { WheelCalibration } from '../input/SteeringState';
+import { SessionManager } from '../session/SessionManager';
+import type { SessionPhase } from '../session/SessionState';
+import { TrafficManager, type TrafficDensity } from '../traffic/TrafficManager';
 import { Bus } from '../vehicle/Bus';
 import type { VehicleModel } from '../vehicle/VehicleModel';
 import type { WorldPreset } from '../world/presets/types';
@@ -17,16 +21,31 @@ import { CONFIG } from './config';
 import { GameLoop } from './GameLoop';
 import { SceneManager } from './SceneManager';
 
+export interface GameOptions {
+  playTimeMinutes: number | null;
+  trafficDensity: TrafficDensity;
+  /** Override for automated tests only. */
+  endingDurationMs?: number;
+}
+
+const smoothstep = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
 /**
- * Wires the three independent layers together:
- *   DRIVE  (input → mixer ↔ autopilot → vehicle controller)
- *   WORLD  (preset → road, chunks, props)
- *   CREATE (drawings → sprites), fed in through setDrawings().
+ * Wires the independent layers together:
+ *   DRIVE   (input → mixer ↔ autopilot → vehicle controller)
+ *   WORLD   (preset → road, chunks, props, traffic)
+ *   CREATE  (drawings → sprites), fed in through setDrawings()
+ *   SESSION (play-time limit → gentle ending)
  */
 export class Game {
   readonly scenes: SceneManager;
   readonly input = new InputManager();
   readonly metrics = new SessionMetrics();
+  readonly session: SessionManager;
+  readonly traffic: TrafficManager;
   private readonly mixer = new SteeringMixer();
   private readonly autopilot = new Autopilot();
   private readonly vehicle = new VehicleController();
@@ -36,29 +55,55 @@ export class Game {
   private readonly sprites: DrawingSpriteLayer;
   private readonly loop: GameLoop;
   private readonly busPosition = new THREE.Vector3();
+  private readonly phaseListeners: ((phase: SessionPhase) => void)[] = [];
+  private readonly gearListeners: ((gear: number) => void)[] = [];
   private driving = false;
   private paused = false;
   private timeSec = 0;
   private autoSteer = 0;
   private mixedSteer = 0;
   private wasBraking = false;
+  private lastPhase: SessionPhase = 'idle';
+  private engineLevel = 1;
 
   constructor(
     container: HTMLElement,
     readonly preset: WorldPreset,
     private readonly audio: AudioManager,
+    options: GameOptions,
   ) {
     this.scenes = new SceneManager(container);
     this.world = new WorldManager(preset, this.scenes.scene);
     this.bus = new Bus();
     this.scenes.scene.add(this.bus.object);
+    this.traffic = new TrafficManager(this.world.road, preset.traffic, options.trafficDensity);
+    this.scenes.scene.add(this.traffic.group);
+    this.traffic.onPass(() => {
+      if (this.driving && !this.paused) this.audio.zoom();
+    });
     this.sprites = new DrawingSpriteLayer(this.world.road);
+    const contact = () => {
+      if (this.driving && !this.paused && !this.isEnding()) this.input.gamepad.haptics.impact(performance.now());
+    };
+    this.traffic.onContact(contact);
+    this.sprites.onContact(contact);
+    this.sprites.onSpawn((id) => this.metrics.markImpression(id));
     this.scenes.scene.add(this.sprites.group);
     this.cameraRig = new CameraRig(this.scenes.camera, this.world.road);
+    this.session = new SessionManager(options.playTimeMinutes, options.endingDurationMs);
     this.loop = new GameLoop((dt, now) => this.frame(dt, now));
 
-    this.input.onHorn(() => {
-      if (this.driving && !this.paused) this.audio.horn();
+    this.input.onHorn((variant) => {
+      if (!this.driving || this.paused) return;
+      this.metrics.markHorn();
+      this.audio.horn(variant);
+    });
+    this.input.onShift((direction) => {
+      if (!this.driving || this.paused || this.isEnding()) return;
+      const previous = this.vehicle.gearbox.getGear();
+      this.vehicle.gearbox.shift(direction);
+      const gear = this.vehicle.gearbox.getGear();
+      if (gear !== previous) this.gearListeners.forEach((listener) => listener(gear));
     });
   }
 
@@ -67,20 +112,62 @@ export class Game {
     this.loop.start();
   }
 
-  /** START DRIVING: enable input and sound. The vehicle keeps its autopilot until touched. */
+  /** START DRIVING: enable input and sound; the play-time countdown starts now. */
   startDriving(): void {
     if (this.driving) return;
     this.driving = true;
-    this.input.attach();
+    this.input.attach(this.scenes.renderer.domElement);
     this.metrics.markDrivingStarted();
+    this.session.start();
   }
 
   setPaused(paused: boolean): void {
     this.paused = paused;
+    if (paused) this.input.gamepad.haptics.stop();
+    this.input.touchBrake.setEnabled(!paused && !this.isEnding());
   }
 
   isPaused(): boolean {
     return this.paused;
+  }
+
+  // ---------------------------------------------------------------- session
+
+  setPlayTimeMinutes(minutes: number | null): void {
+    this.session.setLimitMinutes(minutes);
+  }
+
+  /** Parent-triggered (or time limit) gentle ending. */
+  beginEndingSequence(): void {
+    this.session.beginEnding();
+  }
+
+  isEnding(): boolean {
+    return this.session.phase === 'ending' || this.session.phase === 'finished';
+  }
+
+  /** Parent action only: start a fresh session after the ending. */
+  restartSession(): void {
+    this.session.restart();
+    this.vehicle.gearbox.reset();
+    this.vehicle.setCruiseScale(1);
+    this.mixer.setForcedAutopilot(false);
+    this.input.touchBrake.setEnabled(!this.paused);
+    this.setEngineLevel(1);
+  }
+
+  onSessionPhase(listener: (phase: SessionPhase) => void): void {
+    this.phaseListeners.push(listener);
+  }
+
+  onGearChange(listener: (gear: number) => void): void {
+    this.gearListeners.push(listener);
+  }
+
+  // ---------------------------------------------------------------- world / drawings
+
+  setTrafficDensity(density: TrafficDensity): void {
+    this.traffic.setDensity(density);
   }
 
   setCalibration(cal: WheelCalibration | null): void {
@@ -95,6 +182,8 @@ export class Game {
     void this.sprites.spawnSoon(id, this.vehicle.state.progress);
   }
 
+  // ---------------------------------------------------------------- loop
+
   private frame(dt: number, now: number): void {
     if (!this.paused) this.simulate(dt, now);
     this.scenes.render();
@@ -105,17 +194,38 @@ export class Game {
     this.timeSec += dt;
     const state = this.vehicle.state;
 
+    // Paused frames never reach here, so Parent Menu time never counts.
+    if (this.driving) this.session.tick(dtMs, true);
+    const phase = this.session.phase;
+    const ending = phase === 'ending' || phase === 'finished';
+    if (phase !== this.lastPhase) this.onPhaseChange(phase);
+
     let manual = 0;
     let held = false;
     let braking = false;
+    let speedMultiplier = 1;
     if (this.driving) {
       this.input.update(dtMs);
-      manual = this.input.getSteering();
-      held = this.input.isHeldActive();
-      braking = this.input.isBraking();
+      // During the ending driving inputs are ignored; the horn still works.
+      if (!ending) {
+        manual = this.input.getSteering();
+        held = this.input.isHeldActive();
+        braking = this.input.isBraking();
+        speedMultiplier = this.input.getSpeedMultiplier();
+      }
     }
-    if (braking && !this.wasBraking) this.audio.airBrake();
+    if (braking && !this.wasBraking) {
+      this.audio.airBrake();
+      this.metrics.markBrake();
+    }
     this.wasBraking = braking;
+
+    // Ending: autopilot pulls over to the shoulder, then slows to a gentle stop.
+    const p = this.session.endingProgress();
+    const pullOver = ending ? smoothstep(0, CONFIG.session.slowFrom, p) : 0;
+    const cruise = ending ? 1 - smoothstep(CONFIG.session.slowFrom, CONFIG.session.stopAt, p) : 1;
+    this.vehicle.setCruiseScale(cruise);
+    if (ending) this.setEngineLevel(phase === 'finished' ? 0 : 0.35 + 0.65 * cruise);
 
     this.autoSteer = this.autopilot.getSteering({
       timeSec: this.timeSec,
@@ -123,12 +233,17 @@ export class Game {
       lateralOffset: state.lateralOffset,
       lateralVelocity: state.lateralVelocity,
       curvatureAhead: this.world.road.curvature(state.progress + CONFIG.autopilot.lookahead),
+      pullOver,
+      pullOverOffset: CONFIG.session.pullOverOffset,
     });
     const before = this.mixer.getLastActivityMs();
     this.mixedSteer = this.mixer.update(manual, this.autoSteer, now, dtMs, held);
     if (this.mixer.getLastActivityMs() !== before) this.metrics.markInput();
 
-    this.vehicle.update(dt, this.mixedSteer, braking);
+    this.vehicle.update(dt, this.mixedSteer, braking, speedMultiplier);
+    if (this.driving && !ending) {
+      this.input.gamepad.haptics.roadEdge(now, roadEdgeStrength(state.lateralOffset, manual, state.speed));
+    }
 
     // Place the bus on the road.
     const frame = this.world.road.frame(state.progress);
@@ -137,35 +252,76 @@ export class Game {
     this.bus.object.rotation.y = -(frame.heading + state.yaw);
     this.bus.animate(dt, state, this.timeSec);
 
-    this.world.update(state.progress, this.busPosition);
-    this.sprites.update(dt, state.progress);
+    this.world.update(state.progress, this.busPosition, this.timeSec, dt);
+    this.traffic.update(dt, this.timeSec, { s: state.progress, d: state.lateralOffset });
+    this.sprites.update(dt, state.progress, state.lateralOffset);
     this.cameraRig.update(dt, state.progress, state.lateralOffset, this.mixedSteer);
-    this.audio.update(dt, this.mixedSteer, state.speed / CONFIG.driving.speed, this.driving);
+    this.audio.update(dt, this.mixedSteer, state.speed / CONFIG.driving.speed, this.driving,
+      braking ? 1 : speedMultiplier, this.vehicle.gearbox.getRatios().rpm);
     if (this.driving) this.metrics.tick(dtMs, this.mixer.getMode(), this.loop.getFps());
   }
+
+  private onPhaseChange(phase: SessionPhase): void {
+    this.lastPhase = phase;
+    if (phase === 'ending') {
+      this.input.gamepad.haptics.stop();
+      this.mixer.setForcedAutopilot(true);
+      this.input.touchBrake.setEnabled(false);
+    }
+    if (phase === 'finished') this.metrics.markSessionFinished('timeLimit');
+    for (const listener of this.phaseListeners) listener(phase);
+  }
+
+  private setEngineLevel(level: number): void {
+    if (Math.abs(level - this.engineLevel) < 0.02) return;
+    this.engineLevel = level;
+    this.audio.setEngineLevel(level);
+  }
+
+  // ---------------------------------------------------------------- diagnostics
 
   getLive(): LiveDiagnostics {
     const cal = this.input.gamepad.getCalibration();
     const pad = this.input.gamepad.getConnected();
     const res = this.scenes.resolution();
+    const tilt = this.input.tilt;
+    const remaining = this.session.remainingMs();
     return {
       fps: this.loop.getFps(),
       resolution: `${res.width}×${res.height}`,
       devicePixelRatio: window.devicePixelRatio,
       inputSource: this.input.getSource(),
       gamepadId: pad?.id ?? '(none)',
+      haptics: this.input.gamepad.haptics.getStatus(),
+      gear: `${this.vehicle.gearbox.getGear()} / 5 (cruise ${(this.vehicle.getCruisingSpeed() * 3.6).toFixed(1)} km/h)`,
       steeringAxis: cal && pad && cal.gamepadId === pad.id ? `${cal.steeringAxis}${cal.invertAxis ? ' (inv)' : ''}` : `${CONFIG.gamepad.defaultAxis} (default)`,
       rawSteering: this.input.gamepad.getRaw(),
+      gamepadAxes: pad ? pad.axes.map((value, axis) => `${axis}:${value.toFixed(3)}`).join(' ') : '(none)',
+      pedalBrake: cal?.brake && pad?.id === cal.gamepadId
+        ? `axis ${cal.brake.axis}: ${Math.round(this.input.gamepad.getBrake() * 100)}%`
+        : '(not calibrated)',
+      pedalThrottle: cal?.throttle && pad?.id === cal.gamepadId
+        ? `axis ${cal.throttle.axis}: ${Math.round(this.input.gamepad.getThrottle() * 100)}%`
+        : '(not calibrated)',
       normalizedSteering: this.input.getSteering(),
+      tilt: !tilt.isEnabled() ? 'off' : tilt.hasSignal() ? `${tilt.getRelativeAngle().toFixed(1)}° → ${tilt.getSteering().toFixed(2)}` : 'no signal',
       speedKmh: this.vehicle.state.speed * 3.6,
       braking: this.vehicle.state.braking,
       mode: this.mixer.getMode(),
       manualWeight: this.mixer.getManualWeight(),
+      session: `${this.session.phase}${remaining === null ? ' (unlimited)' : ` (${Math.ceil(remaining / 1000)} s left)`}`,
+      world: this.preset.id,
       worldChunks: this.world.chunks.activeIndices().join(','),
       activeSprites: this.sprites.activeCount(),
+      traffic: this.traffic.activeCount(),
       drawCalls: this.scenes.drawCalls(),
+      triangles: this.scenes.triangles(),
       appVersion: __APP_VERSION__,
     };
+  }
+
+  getTakeoverCounts(): { manual: number; autopilot: number } {
+    return this.mixer.getTakeoverCounts();
   }
 
   /** Read-only snapshot for automated tests and the diagnostics overlay. */
@@ -174,6 +330,8 @@ export class Game {
     return {
       driving: this.driving,
       paused: this.paused,
+      world: this.preset.id,
+      phase: this.session.phase,
       progress: s.progress,
       lateralOffset: s.lateralOffset,
       speed: s.speed,
@@ -182,6 +340,7 @@ export class Game {
       manualSteering: this.input.getSteering(),
       mode: this.mixer.getMode(),
       activeSprites: this.sprites.activeCount(),
+      traffic: this.traffic.activeCount(),
     };
   }
 }
