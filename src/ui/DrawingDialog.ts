@@ -58,7 +58,7 @@ export function createAddDrawingScreen(drawings: DrawingManager): Screen {
     const body = h('div', { class: 'dialog-body' });
     panel.append(
       h('h2', {}, 'Add Drawing'),
-      h('p', { class: 'hint' }, 'Take a photo of a drawing (JPEG, PNG or WebP). It is resized on this device before upload.'),
+      h('p', { class: 'hint' }, __LEO_AI_ENABLED__ ? 'Take a photo of a drawing (JPEG, PNG or WebP). It is resized on this device before upload.' : 'Choose a drawing (JPEG, PNG or WebP). It stays on this device.'),
       body,
       h('button', { type: 'button', class: 'menu-button', onclick: back }, 'Back'),
     );
@@ -84,7 +84,7 @@ export function createAddDrawingScreen(drawings: DrawingManager): Screen {
       });
       body.append(
         h('label', { class: 'file-label' }, h('span', { class: 'menu-button primary' }, 'Choose image…'), input),
-        h('label', { class: 'field' }, h('span', {}, 'AI access code'), token),
+        __LEO_AI_ENABLED__ ? h('label', { class: 'field' }, h('span', {}, 'AI access code'), token) : null,
       );
     };
 
@@ -110,6 +110,12 @@ export function createAddDrawingScreen(drawings: DrawingManager): Screen {
         clear(body);
         body.append(h('p', { class: 'error' }, 'This image could not be read. Please try another one.'));
         body.append(h('button', { type: 'button', class: 'menu-button', onclick: showPicker }, 'Choose another'));
+        return;
+      }
+      if (disposed) return;
+      if (!__LEO_AI_ENABLED__) {
+        const asset = await drawings.add({ image: resized, canMove: false, confidence: null, source: 'original' });
+        if (!disposed) showDone(asset);
         return;
       }
       await process(resized);

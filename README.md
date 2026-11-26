@@ -3,7 +3,7 @@
 > **A little driving world for little drivers.**
 > Drive. Draw. Watch your world come alive.
 
-> ⚠️ **Alpha.** Leo Racer is being tested with a few families. Expect rough edges.
+> ⚠️ **Public alpha.** Expect rough edges. AI processing is disabled in the public build; drawings stay on your device.
 
 Leo Racer is a browser driving toy for children aged 2–4.
 
@@ -53,7 +53,7 @@ Leo Racer is a browser driving toy for children aged 2–4.
 - **Built-in traffic:** cars, trucks, tractors and buses drive in their lanes and make way for the school bus. Parents set the density: Off, Low, Normal or Busy.
   - **Police:** a police SUV with a red/blue light bar flashing at 1.5 Hz (below the 3 Hz photosensitivity limit) drives in Sea to Sky and City.
   - **Sports car:** an 80s wedge supercar zooms past the bus on the Sea to Sky highway and drives calmly in City.
-- **Draw Your World:** the photo is resized and its metadata stripped on the device. AI then cleans the drawing and suggests MOVES or STAYS, and a parent can override that.
+- **Draw Your World:** the photo is resized and its metadata stripped on the device. Parents choose MOVES or STAYS. Optional AI cleanup is available only in explicitly enabled development builds.
   - A drawing that STAYS stands by the road.
   - A drawing that MOVES drives in a lane or alongside the road.
   - Each drawing has a frequency: Rare, Normal or Often.
@@ -96,12 +96,10 @@ Requires **Node.js 22.13+** (24 LTS recommended; see `.nvmrc`).
 
 ```bash
 npm install
-npm run db:migrate:local    # once: local D1 tables for AI quota
 npm run dev                 # http://localhost:5173
 ```
 
-Local development uses the **mock** AI provider. It returns the image unchanged with a pseudo-random MOVES/STAYS guess, and needs no API key and no access code.
-To try a real provider, copy `.dev.vars.example` to `.dev.vars` and fill it in.
+The default development and production builds use local drawings only. For isolated AI development, run `npm run db:migrate:local` and `npm run dev:ai` (uses `wrangler.ai-dev.jsonc` and the mock provider by default). Never set `LEO_AI_DEV=1` in the public build.
 In dev mode, `?debug` shows the diagnostics overlay.
 
 | Script               | What it does                                           |
@@ -133,12 +131,10 @@ flowchart LR
     TR[TrafficManager]
   end
   subgraph CREATE
-    D[Photo] --> PP[Resize + strip EXIF] --> W[Worker /api] --> AI[(AI provider)]
-    W --> DM[DrawingManager<br/>IndexedDB] --> SP[Drawing sprites]
+    D[Photo] --> PP[Resize + strip EXIF] --> DM[DrawingManager<br/>IndexedDB] --> SP[Drawing sprites]
   end
   S[SessionManager<br/>play-time limit] --> MX
   VC --> WM
-  W -.quota.-> D1[(D1: counters only)]
 ```
 
 The game core is fully client-side. If the network, the AI service or D1 fails, driving keeps working.
@@ -146,31 +142,11 @@ Details: [docs/architecture.md](docs/architecture.md) · [docs/ai-processing.md]
 
 ## Privacy
 
-There are no accounts, analytics, ads or child data.
-- **Drawings** are stored only in the browser (IndexedDB).
-- **AI processing:** the endpoint receives a resized, metadata-free copy of a drawing, passes it to the AI provider, and returns the result without storing it.
-- **D1** stores only anonymous usage counters, which enforce the per-install monthly quota, a global daily cap and a per-minute rate limit.
+The public build has no accounts, analytics, ads, AI provider or drawing upload endpoint. Drawings are resized and stored locally in IndexedDB and can be deleted from Manage Drawings. The optional AI development build is separate and must not be enabled in public deployments.
 
-## Deploying to Cloudflare (alpha)
+## Deploying to Cloudflare (public alpha)
 
-1. Create the D1 database and copy the printed `database_id` into [wrangler.jsonc](wrangler.jsonc):
-   ```bash
-   npx wrangler d1 create leo-racer-alpha
-   npm run db:migrate:remote
-   ```
-2. Set secrets. They are Worker-side only and never go in `VITE_*` variables:
-   ```bash
-   npx wrangler secret put ALPHA_ACCESS_TOKEN   # shared code for alpha testers
-   npx wrangler secret put AI_API_KEY           # only when AI_PROVIDER=openai
-   ```
-   Plain vars in `wrangler.jsonc`: `AI_PROVIDER`, `AI_MONTHLY_LIMIT`, `AI_GLOBAL_DAILY_LIMIT`, `AI_RATE_LIMIT_PER_MINUTE`.
-3. Connect the GitHub repo in **Cloudflare dashboard → Workers & Pages → leo-racer-alpha → Settings → Builds**:
-   - Build command: `npm run build`
-   - Deploy command: `npx wrangler deploy`
-   - Non-production branch deploy command: `npx wrangler versions upload`. This gives each PR a preview URL.
-
-After that, merging to `main` builds and deploys automatically.
-[CI](.github/workflows/ci.yml) runs typecheck, lint and unit tests on every PR. Browser tests run on `main` and are not blocking yet.
+Connect the repository to a Worker named `leo-racer` in Cloudflare Workers & Pages. Use production branch `main`, build command `npm run build`, deploy command `npx wrangler deploy`. Do not set `LEO_AI_DEV` or any AI secrets. The default Wrangler config needs no D1 database. Attach the custom domain in the Cloudflare dashboard after deployment. CI runs typecheck, lint, unit tests, production build and browser tests on pull requests.
 
 ## Testing with families
 

@@ -44,7 +44,9 @@ export interface ParentMenuScreens {
   calibrateWheel: Screen;
 }
 
-export const PRIVACY_NOTE =
+export const PRIVACY_NOTE = !__LEO_AI_ENABLED__
+  ? 'No accounts, ads or analytics. Drawings are resized and stored in this browser only; they are not uploaded. You can delete them in Manage Drawings. AI processing is disabled in this public release.'
+  :
   'Leo Racer collects no child data: no names, ages, photos, video, microphone or location. ' +
   'Drawings are stored only in this browser. A drawing sent for AI processing is resized and stripped of ' +
   'photo metadata first, then temporarily transmitted through the Leo Racer server to the AI service; ' +

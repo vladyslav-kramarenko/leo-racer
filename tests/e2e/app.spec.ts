@@ -393,12 +393,17 @@ test('finished session: gentle stop, ALL DONE, child cannot restart, parent can'
   expect(again.speed).toBeGreaterThan(0);
 });
 
-test('MOVES/STAYS override and frequency persist after reload', async ({ page }) => {
+test('local drawings stay on device and MOVES/STAYS and frequency persist', async ({ page }) => {
+  const uploads: string[] = [];
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().includes('/api/')) uploads.push(request.url());
+  });
   await startDriving(page);
   await openParentMenu(page);
   await page.getByTestId('add-drawing-button').click();
   await page.getByTestId('drawing-file-input').setInputFiles(await drawingFile(page));
   await expect(page.getByText('Added to the world!')).toBeVisible({ timeout: 20_000 });
+  expect(uploads).toEqual([]);
   await page.getByTestId('stays-button').click();
   await page.getByRole('button', { name: 'Done' }).click();
   await page.getByTestId('manage-drawings-button').click();
@@ -417,4 +422,9 @@ test('MOVES/STAYS override and frequency persist after reload', async ({ page })
 test('traffic appears with the default setting', async ({ page }) => {
   await startDriving(page);
   await expect.poll(async () => (await state(page)).traffic, { timeout: 20_000 }).toBeGreaterThan(0);
+});
+
+test('public worker rejects drawing upload and usage endpoints', async ({ request }) => {
+  expect((await request.post('/api/v1/drawings/process')).status()).toBe(404);
+  expect((await request.get('/api/v1/usage')).status()).toBe(404);
 });
