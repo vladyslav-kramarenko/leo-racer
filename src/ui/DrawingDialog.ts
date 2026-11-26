@@ -84,7 +84,7 @@ export function createAddDrawingScreen(drawings: DrawingManager): Screen {
       });
       body.append(
         h('label', { class: 'file-label' }, h('span', { class: 'menu-button primary' }, 'Choose image…'), input),
-        __LEO_AI_ENABLED__ ? h('label', { class: 'field' }, h('span', {}, 'AI access code'), token) : null,
+        ...(__LEO_AI_ENABLED__ ? [h('label', { class: 'field' }, h('span', {}, 'AI access code'), token)] : []),
       );
     };
 
