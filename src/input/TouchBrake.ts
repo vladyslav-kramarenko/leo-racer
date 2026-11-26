@@ -2,7 +2,8 @@ import { CONFIG } from '../game/config';
 
 /**
  * One big brake target for tablets: pressing anywhere in the bottom part of the
- * game canvas brakes; lifting every finger releases. Multi-touch safe.
+ * game canvas brakes; lifting every finger releases. Other touch taps honk.
+ * The top-left parent-menu corner is reserved. Multi-touch safe.
  * Deliberately not a virtual gamepad.
  */
 export class TouchBrake {
@@ -10,12 +11,21 @@ export class TouchBrake {
   private enabled = true;
   private listener: ((braking: boolean) => void) | null = null;
   private used = false;
+  private hornListener: (() => void) | null = null;
 
   constructor(private readonly zone: number = CONFIG.touch.brakeZone) {}
 
   attach(target: HTMLElement): () => void {
     const down = (e: PointerEvent) => {
-      if (!this.enabled || !isInZone(e, target, this.zone)) return;
+      if (!this.enabled) return;
+      if (!isInZone(e, target, this.zone)) {
+        const corner = CONFIG.parentMenu.cornerSize;
+        if ((e.pointerType === 'touch' || e.pointerType === 'pen') &&
+            !(e.clientX <= corner && e.clientY <= corner)) {
+          this.hornListener?.();
+        }
+        return;
+      }
       this.pointers.add(e.pointerId);
       this.used = true;
       try {
@@ -46,6 +56,10 @@ export class TouchBrake {
       this.pointers.clear();
       this.emit();
     }
+  }
+
+  onHorn(listener: () => void): void {
+    this.hornListener = listener;
   }
 
   onChange(listener: (braking: boolean) => void): void {

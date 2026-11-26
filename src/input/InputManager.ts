@@ -40,6 +40,7 @@ export class InputManager implements SteeringInput {
   onHorn(listener: (variant: number) => void): void {
     this.keyboard.onHorn((variant) => { this.used.add('keyboard'); listener(variant); });
     this.gamepad.onHorn((variant) => { this.used.add('gamepad'); listener(variant); });
+    this.touchBrake.onHorn(() => { this.used.add('touch'); listener(0); });
   }
 
   onShift(listener: (direction: -1 | 1) => void): void {
