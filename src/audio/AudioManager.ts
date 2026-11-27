@@ -95,7 +95,10 @@ export class AudioManager {
       const loop = ctx.createBufferSource();
       loop.buffer = this.makeSound(ctx, createTrainChuff);
       loop.loop = true;
-      loop.connect(this.trainGain);
+      // Keep the double whistle at its original level; soften only the steam rhythm.
+      const chuffGain = ctx.createGain();
+      chuffGain.gain.value = 0.8;
+      loop.connect(chuffGain).connect(this.trainGain);
       loop.start();
     }
     if (this.trainGain) {
