@@ -126,6 +126,8 @@ export class Game {
     if (paused) {
       this.input.gamepad.haptics.stop();
       this.audio.setRainLevel(0);
+      this.audio.setTrainSound(this.world.freightRailway?.soundDistance(this.busPosition) ?? Infinity, false);
+      this.audio.setSantaSound(this.world.santaSleigh?.isFlying() ? this.world.santaSleigh.group.position.distanceTo(this.busPosition) : Infinity, false);
     }
     this.input.touchBrake.setEnabled(!paused && !this.isEnding());
   }
@@ -258,6 +260,10 @@ export class Game {
 
     this.world.update(state.progress, this.busPosition, this.timeSec, dt, this.driving && phase === 'running');
     if (this.world.weather) this.audio.setRainLevel(this.world.weather.rainAmount);
+    const soundActive = this.driving && phase === 'running';
+    if (this.world.freightRailway) this.audio.setTrainSound(this.world.freightRailway.soundDistance(this.busPosition), soundActive);
+    const santa = this.world.santaSleigh;
+    if (santa) this.audio.setSantaSound(santa.isFlying() ? santa.group.position.distanceTo(this.busPosition) : Infinity, soundActive, santa.getFlightProgress());
     this.traffic.update(dt, this.timeSec, { s: state.progress, d: state.lateralOffset });
     this.sprites.update(dt, state.progress, state.lateralOffset);
     this.cameraRig.update(dt, state.progress, state.lateralOffset, this.mixedSteer);

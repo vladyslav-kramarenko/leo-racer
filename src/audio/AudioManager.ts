@@ -1,11 +1,12 @@
 import type { AmbientEvent, AudioPreset } from '../world/presets/types';
 import { DEFAULT_HORN, HORNS, normalizeHorn } from './horns';
+import { createCubRoar, createTrainChuff, createTrainWhistle, createSantaGreeting, distanceGain, santaGreetingGain, shouldGreetSanta } from './characterSounds';
 
 /** Engine loudness at cruise. Kept low so the bus hums gently instead of droning. */
 const ENGINE_GAIN = 0.055;
 
 /**
- * All sounds are synthesised with Web Audio — no audio files, no licensing questions.
+ * Sounds are synthesised with Web Audio except Santa's locally bundled CC0 voice.
  * Engine: two detuned oscillators through a low-pass filter.
  * Ambience: a filtered noise bed plus occasional events chosen by the world preset
  * (construction clinks, birds, cows, waves, distant honks, bicycle bells, seagulls).
@@ -32,6 +33,16 @@ export class AudioManager {
   private hornUntil = Array<number>(HORNS.length).fill(0);
   private zoomUntil = 0;
   private roarUntil = 0;
+  private roarBuffer: AudioBuffer | null = null;
+  private trainGain: GainNode | null = null;
+  private trainLevel = 0;
+  private trainWhistled = false;
+  private trainWhistleBuffer: AudioBuffer | null = null;
+  private santaGain: GainNode | null = null;
+  private santaLevel = 0;
+  private santaGreeted = false;
+  private santaBuffer: AudioBuffer | null = null;
+  private santaLoading: Promise<void> | null = null;
   private baseHz = 52;
   private whiteNoise: AudioBuffer | null = null;
   private waveNoise: AudioBuffer | null = null;
@@ -58,56 +69,122 @@ export class AudioManager {
     return this.ctx;
   }
 
-  /** A gentle, short, synthesised cub-like "rawr". No engine sounds before Start. */
+  /** A soft vocal-style cub roar, generated once and reused. */
   mascotRoar(): void {
     if (!this.enabled) return;
     const ctx = this.unlock();
-    const out = this.master;
-    if (!ctx || !out) return;
-    const now = ctx.currentTime;
-    if (now < this.roarUntil) return;
-    this.roarUntil = now + 0.65;
-
-    const voice = ctx.createOscillator();
-    voice.type = 'sawtooth';
-    voice.frequency.setValueAtTime(175, now);
-    voice.frequency.exponentialRampToValueAtTime(245, now + 0.14);
-    voice.frequency.exponentialRampToValueAtTime(155, now + 0.46);
-    const formant = ctx.createBiquadFilter();
-    formant.type = 'lowpass';
-    formant.frequency.setValueAtTime(650, now);
-    formant.frequency.linearRampToValueAtTime(1050, now + 0.15);
-    formant.frequency.linearRampToValueAtTime(430, now + 0.5);
-    const tremolo = ctx.createOscillator();
-    tremolo.frequency.value = 23;
-    const depth = ctx.createGain();
-    depth.gain.value = 9;
-    tremolo.connect(depth).connect(voice.frequency);
-    voice.connect(formant);
-    envelope(ctx, voice, out, now, 0.12, 0.055, 0.42, formant);
-    tremolo.start(now);
-    tremolo.stop(now + 0.52);
-
-    this.whiteNoise ??= createWhiteNoise(ctx, 1);
-    const breath = ctx.createBufferSource();
-    breath.buffer = this.whiteNoise;
-    const band = ctx.createBiquadFilter();
-    band.type = 'bandpass';
-    band.frequency.value = 800;
-    band.Q.value = 0.7;
+    if (!ctx || !this.master || ctx.currentTime < this.roarUntil) return;
+    this.roarBuffer ??= this.makeSound(ctx, createCubRoar);
+    this.roarUntil = ctx.currentTime + this.roarBuffer.duration + 0.1;
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.025, now + 0.08);
-    gain.gain.linearRampToValueAtTime(0, now + 0.46);
-    breath.connect(band).connect(gain).connect(out);
-    breath.start(now);
-    breath.stop(now + 0.5);
+    gain.gain.value = 0.34;
+    gain.connect(this.master);
+    const source = this.playBuffer(ctx, this.roarBuffer, gain);
+    source.onended = () => { source.disconnect(); gain.disconnect(); };
+  }
+
+  /** Distance-based train exhaust plus one double whistle per passing locomotive. */
+  setTrainSound(distance: number, active: boolean): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.master) return;
+    if (!Number.isFinite(distance)) this.trainWhistled = false;
+    const level = active ? distanceGain(distance, 12, 115) * 0.42 : 0;
+    if (!this.trainGain && level > 0) {
+      this.trainGain = ctx.createGain();
+      this.trainGain.gain.value = 0;
+      this.trainGain.connect(this.master);
+      const loop = ctx.createBufferSource();
+      loop.buffer = this.makeSound(ctx, createTrainChuff);
+      loop.loop = true;
+      // Keep the double whistle at its original level; soften only the steam rhythm.
+      const chuffGain = ctx.createGain();
+      chuffGain.gain.value = 0.8;
+      loop.connect(chuffGain).connect(this.trainGain);
+      loop.start();
+    }
+    if (this.trainGain) {
+      if (Math.abs(level - this.trainLevel) > 0.005 || (level === 0 && this.trainLevel !== 0)) {
+        this.trainLevel = level;
+        this.trainGain.gain.setTargetAtTime(level, ctx.currentTime, 0.14);
+      }
+      if (active && this.enabled && !this.trainWhistled && distance < 68) {
+        this.trainWhistled = true;
+        this.trainWhistleBuffer ??= this.makeSound(ctx, createTrainWhistle);
+        const source = this.playBuffer(ctx, this.trainWhistleBuffer, this.trainGain);
+        source.onended = () => source.disconnect();
+      }
+    }
+  }
+
+  /** Santa's greeting once per flypast; distance and pause both control volume. */
+  setSantaSound(distance: number, active: boolean, flightProgress: number | null = null): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.master) return;
+    if (!Number.isFinite(distance)) this.santaGreeted = false;
+    const level = active ? santaGreetingGain(distance) : 0;
+    if (!this.santaGain && level > 0) {
+      this.santaGain = ctx.createGain();
+      this.santaGain.gain.value = 0;
+      this.santaGain.connect(this.master);
+    }
+    if (this.santaGain) {
+      if (Math.abs(level - this.santaLevel) > 0.005 || (level === 0 && this.santaLevel !== 0)) {
+        this.santaLevel = level;
+        this.santaGain.gain.setTargetAtTime(level, ctx.currentTime, 0.12);
+      }
+      if (active && this.enabled && !this.santaGreeted && this.santaBuffer && shouldGreetSanta(distance, flightProgress)) {
+        this.santaGreeted = true;
+        // Make the greeting the focus, including over passing-car air noise.
+        const ambience = this.ambientGain;
+        ambience?.gain.setTargetAtTime(0.22, ctx.currentTime, 0.06);
+        const source = this.playBuffer(ctx, this.santaBuffer, this.santaGain);
+        source.onended = () => {
+          source.disconnect();
+          ambience?.gain.setTargetAtTime(1, ctx.currentTime, 0.18);
+        };
+      }
+    }
+  }
+
+  /** Load the small same-origin recording when Winter starts, not on every flypast. */
+  private preloadSanta(ctx: AudioContext): void {
+    if (this.santaLoading || this.santaBuffer) return;
+    this.santaLoading = fetch('/audio/santa-voice.mp3')
+      .then(response => {
+        if (!response.ok) throw new Error('Santa audio unavailable');
+        return response.arrayBuffer();
+      })
+      .then(bytes => ctx.decodeAudioData(bytes))
+      .then(voice => {
+        const samples = createSantaGreeting(ctx.sampleRate, voice.getChannelData(0));
+        const buffer = ctx.createBuffer(1, samples.length, ctx.sampleRate);
+        buffer.getChannelData(0).set(samples);
+        this.santaBuffer = buffer;
+      })
+      .catch(() => { /* No synthetic voice fallback; the game stays playable. */ });
+  }
+
+  private makeSound(ctx: AudioContext, generate: (rate: number) => Float32Array): AudioBuffer {
+    const samples = generate(ctx.sampleRate);
+    const buffer = ctx.createBuffer(1, samples.length, ctx.sampleRate);
+    buffer.getChannelData(0).set(samples);
+    return buffer;
+  }
+
+  private playBuffer(ctx: AudioContext, buffer: AudioBuffer, output: AudioNode): AudioBufferSourceNode {
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(output);
+    source.start();
+    return source;
   }
 
   /** Must be called from a user gesture (START DRIVING). */
-  start(preset: AudioPreset): void {
+  start(preset: AudioPreset, santa = false): void {
     const ctx = this.unlock();
-    if (!ctx || !this.master || this.engineOsc.length) return;
+    if (!ctx || !this.master) return;
+    if (santa) this.preloadSanta(ctx);
+    if (this.engineOsc.length) return;
     this.baseHz = preset.engineBaseHz;
 
     // Engine: soft and low — present, but not a drone. Oscillators → low-pass → gentle
@@ -253,7 +330,7 @@ export class AudioManager {
     }
     if (this.rainGain && Math.abs(target - this.rainLevel) > 0.005) {
       this.rainLevel = target;
-      this.rainGain.gain.setTargetAtTime(target * 0.065, ctx.currentTime, 0.12);
+      this.rainGain.gain.setTargetAtTime(target * 0.052, ctx.currentTime, 0.12);
     } else if (this.rainGain && target === 0 && this.rainLevel !== 0) {
       this.rainLevel = 0;
       this.rainGain.gain.setTargetAtTime(0, ctx.currentTime, 0.12);
@@ -305,7 +382,7 @@ export class AudioManager {
     g.gain.setValueAtTime(0, now);
     g.gain.linearRampToValueAtTime(0.035, now + 0.45);
     g.gain.linearRampToValueAtTime(0, now + 1.5);
-    osc.connect(lp).connect(g).connect(this.master);
+    osc.connect(lp).connect(g).connect(this.ambientGain ?? this.master);
     osc.start(now);
     osc.stop(now + 1.55);
 
@@ -321,7 +398,7 @@ export class AudioManager {
     ng.gain.setValueAtTime(0, now);
     ng.gain.linearRampToValueAtTime(0.06, now + 0.5);
     ng.gain.linearRampToValueAtTime(0, now + 1.45);
-    noise.connect(nf).connect(ng).connect(this.master);
+    noise.connect(nf).connect(ng).connect(this.ambientGain ?? this.master);
     noise.start(now);
     noise.stop(now + 1.5);
   }
