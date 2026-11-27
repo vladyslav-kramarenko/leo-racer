@@ -71,6 +71,27 @@ test('page loads with the start screen', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('Leo reacts to taps without starting the game', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/');
+  const mascot = page.getByTestId('leo-mascot-button');
+  await mascot.evaluate((el) => {
+    el.setAttribute('data-reactions', '0');
+    el.addEventListener('animationstart', () => el.setAttribute('data-reactions', String(Number(el.getAttribute('data-reactions')) + 1)));
+  });
+  await mascot.click();
+  await expect(mascot).toHaveAttribute('data-reactions', '1');
+  await expect(page.getByTestId('start-screen')).toBeVisible();
+  expect((await state(page)).driving).toBe(false);
+  await expect(mascot).not.toHaveClass(/reacting/);
+  await mascot.click();
+  await expect(mascot).toHaveAttribute('data-reactions', '2');
+  await page.getByTestId('start-button').click();
+  await expect(page.getByTestId('start-screen')).toBeHidden();
+  expect((await state(page)).driving).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('parent world selection resumes driving while entrance selection keeps the start screen', async ({ page }) => {
   test.setTimeout(120_000);
   const errors = trackErrors(page);
@@ -296,6 +317,29 @@ test('parent menu opens after holding ESC for ~2 seconds', async ({ page }) => {
   await page.getByTestId('resume-button').click();
   await expect(page.getByTestId('parent-menu')).toBeHidden();
   expect((await state(page)).paused).toBe(false);
+});
+
+test('visible parent control requires a continuous hold', async ({ page }) => {
+  await startDriving(page);
+  const trigger = page.getByTestId('parent-trigger');
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toContainText('Hold 2s');
+  await trigger.click();
+  await expect(page.getByTestId('parent-menu')).toBeHidden();
+  const box = (await trigger.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await expect(trigger).toHaveClass(/holding/);
+  await page.mouse.move(box.x + box.width + 50, box.y + box.height + 50);
+  await expect(trigger).not.toHaveClass(/holding/);
+  await page.mouse.up();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await expect(trigger).toHaveClass(/holding/);
+  await expect(page.getByTestId('parent-menu')).toBeVisible({ timeout: 6000 });
+  await page.mouse.up();
+  await page.getByTestId('resume-button').click();
+  await expect(page.getByTestId('parent-menu')).toBeHidden();
 });
 
 test('a short ESC tap does not open the menu', async ({ page }) => {

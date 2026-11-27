@@ -83,6 +83,14 @@ export function validatePreset(preset: WorldPreset): string[] {
     || preset.snowfall.count > 1000 || !Number.isFinite(preset.snowfall.speed) || preset.snowfall.speed <= 0)) {
     errors.push('snowfall needs 1–1000 flakes and a positive speed');
   }
+  if (preset.weather) {
+    const w = preset.weather;
+    const validRange = ([lo, hi]: [number, number]) => Number.isFinite(lo) && Number.isFinite(hi) && lo >= 1 && hi >= lo;
+    if (!Number.isFinite(w.firstRainSec) || w.firstRainSec < 1 || !validRange(w.clearIntervalSec) ||
+        !validRange(w.rainDurationSec) || !Number.isFinite(w.rainbowDurationSec) || w.rainbowDurationSec < 1 ||
+        !Number.isFinite(w.rainbowChance) || w.rainbowChance < 0 || w.rainbowChance > 1 ||
+        !Number.isInteger(w.drops) || w.drops < 1 || w.drops > 600) errors.push('weather: invalid timing, chance or drop count');
+  }
   if (preset.traffic?.enabled && !preset.traffic.vehicles.length) errors.push('traffic.vehicles must not be empty');
   if (!preset.audio?.ambience) errors.push('audio.ambience is required');
   return errors;

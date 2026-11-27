@@ -87,6 +87,45 @@ body {
   max-width: 100%;
 }
 
+.leo-mascot-button {
+  display: block;
+  flex: none;
+  max-width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transform-origin: 50% 85%;
+}
+
+.leo-mascot-button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 18px;
+}
+
+.leo-mascot-button.reacting {
+  animation: leo-hello 550ms ease-out;
+}
+
+@keyframes leo-hello {
+  0%, 100% { transform: none; }
+  15% { transform: scale(1.06, 0.91); }
+  42% { transform: translateY(-10px) rotate(-5deg) scale(1.05); }
+  66% { transform: translateY(-3px) rotate(4deg) scale(1.03); }
+  85% { transform: scale(1.03, 0.96); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leo-mascot-button.reacting { animation: leo-hello-reduced 400ms ease-out; }
+  @keyframes leo-hello-reduced {
+    0%, 100% { filter: none; }
+    35% { filter: brightness(1.15); }
+  }
+}
+
 .leo-mascot {
   display: block;
   width: min(76vw, 38vh, 320px);
@@ -205,6 +244,7 @@ body {
 
 .parent-overlay {
   position: absolute;
+  z-index: 3;
   inset: 0;
   display: flex;
   align-items: center;
@@ -517,34 +557,93 @@ body {
 
 /* ---------- Hold-to-open indicator ---------- */
 
-.hold-ring {
+.parent-trigger {
   position: absolute;
-  top: 14px;
-  left: 14px;
+  z-index: 2;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  left: calc(10px + env(safe-area-inset-left, 0px));
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 4px 9px 4px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(24, 34, 46, 0.32);
+  opacity: 0.68;
+  transition: opacity 160ms ease, background-color 160ms ease;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.parent-trigger.holding,
+.parent-trigger:focus-visible {
+  opacity: 1;
+  background: rgba(24, 34, 46, 0.72);
+}
+
+.parent-trigger:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.parent-trigger-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
-  background: conic-gradient(rgba(255, 255, 255, 0.9) calc(var(--p, 0) * 1%), rgba(255, 255, 255, 0.2) 0);
+  flex: none;
+}
+
+.parent-gear {
+  font: 22px/1 system-ui, sans-serif;
+}
+
+.parent-hold-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke-width: 3;
+  transform: rotate(-90deg);
   pointer-events: none;
 }
 
-@property --p {
-  syntax: '<number>';
-  inherits: false;
-  initial-value: 0;
+.parent-hold-ring .track { stroke: rgba(255, 255, 255, 0.24); }
+.parent-hold-ring .progress {
+  stroke: var(--yellow);
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  stroke-linecap: round;
 }
 
-.hold-ring.holding {
-  animation: hold-fill var(--hold-ms, 2000ms) linear forwards;
+.parent-trigger.holding .progress {
+  animation: parent-hold-fill var(--hold-ms, 2000ms) linear forwards;
 }
 
-@keyframes hold-fill {
-  from {
-    --p: 0;
-  }
-  to {
-    --p: 100;
-  }
+@keyframes parent-hold-fill {
+  to { stroke-dashoffset: 0; }
+}
+
+.parent-trigger-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.parent-trigger-label small {
+  font-size: 10px;
+  font-weight: 400;
 }
 
 /* ---------- Diagnostics ---------- */
@@ -676,13 +775,9 @@ body {
 
 .world-card.current {
   border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
   background: #eaf2fd;
   cursor: default;
-}
-
-.world-card.current span::after {
-  content: ' ✓';
-  color: var(--accent);
 }
 .gear-indicator {
   position: absolute;

@@ -123,7 +123,10 @@ export class Game {
 
   setPaused(paused: boolean): void {
     this.paused = paused;
-    if (paused) this.input.gamepad.haptics.stop();
+    if (paused) {
+      this.input.gamepad.haptics.stop();
+      this.audio.setRainLevel(0);
+    }
     this.input.touchBrake.setEnabled(!paused && !this.isEnding());
   }
 
@@ -149,6 +152,7 @@ export class Game {
   /** Parent action only: start a fresh session after the ending. */
   restartSession(): void {
     this.session.restart();
+    this.world.weather?.reset();
     this.vehicle.gearbox.reset();
     this.vehicle.setCruiseScale(1);
     this.mixer.setForcedAutopilot(false);
@@ -252,7 +256,8 @@ export class Game {
     this.bus.object.rotation.y = -(frame.heading + state.yaw);
     this.bus.animate(dt, state, this.timeSec);
 
-    this.world.update(state.progress, this.busPosition, this.timeSec, dt);
+    this.world.update(state.progress, this.busPosition, this.timeSec, dt, this.driving && phase === 'running');
+    if (this.world.weather) this.audio.setRainLevel(this.world.weather.rainAmount);
     this.traffic.update(dt, this.timeSec, { s: state.progress, d: state.lateralOffset });
     this.sprites.update(dt, state.progress, state.lateralOffset);
     this.cameraRig.update(dt, state.progress, state.lateralOffset, this.mixedSteer);
@@ -331,6 +336,7 @@ export class Game {
       driving: this.driving,
       paused: this.paused,
       world: this.preset.id,
+      weather: this.world.weather?.phase ?? 'clear',
       phase: this.session.phase,
       progress: s.progress,
       lateralOffset: s.lateralOffset,
