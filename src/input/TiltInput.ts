@@ -27,8 +27,19 @@ export function toScreen(gx: number, gy: number, screenAngleDeg: number): { sx: 
  */
 export function tiltAngleDeg(betaDeg: number, gammaDeg: number, screenAngleDeg: number): number {
   const { gx, gy } = gravityFromEuler(betaDeg, gammaDeg);
+  return tiltFromGravity(gx, gy, screenAngleDeg);
+}
+
+export function tiltFromGravity(gx: number, gy: number, screenAngleDeg: number): number {
   const { sx, sy } = toScreen(gx, gy, screenAngleDeg);
   return (Math.atan2(sx, Math.max(-sy, 0.6)) * 180) / Math.PI;
+}
+
+/** Acceleration including gravity is opposite to the physical gravity vector. */
+export function motionGravity(x: number, y: number, z: number): { gx: number; gy: number } | null {
+  const norm = Math.hypot(x, y, z);
+  if (!Number.isFinite(norm) || norm < 4 || norm > 16) return null;
+  return { gx: -x / norm, gy: -y / norm };
 }
 
 /** Wrap an angle difference into [-180, 180). */
@@ -50,9 +61,15 @@ function currentScreenAngle(): number {
   return ((angle % 360) + 360) % 360;
 }
 
-type PermissionedOrientationEvent = typeof DeviceOrientationEvent & {
-  requestPermission?: () => Promise<'granted' | 'denied'>;
-};
+type PermissionedSensor = { requestPermission?: () => Promise<'granted' | 'denied'> };
+type TiltSource = 'orientation' | 'motion';
+const SIGNAL_TIMEOUT = 1500;
+
+async function requestSensor(ctor: PermissionedSensor | undefined): Promise<boolean> {
+  if (!ctor) return false;
+  try { return typeof ctor.requestPermission !== 'function' || await ctor.requestPermission() === 'granted'; }
+  catch { return false; }
+}
 
 /**
  * Tablet/phone tilt steering via the DeviceOrientation API.
@@ -65,12 +82,17 @@ export class TiltInput implements SteeringInput {
   private smoothed = 0;
   private invert = false;
   private listening = false;
-  private lastEventAt = 0;
+  private lastEventAt = -Infinity;
+  private lastOrientationAt = -Infinity;
+  private screenAngle: number | null = null;
+  private source: TiltSource | null = null;
+  private pending: Promise<boolean> | null = null;
+  private generation = 0;
 
   constructor(private readonly cfg: TiltConfig = CONFIG.tilt) {}
 
   static isSupported(): boolean {
-    return typeof window !== 'undefined' && 'DeviceOrientationEvent' in window;
+    return typeof window !== 'undefined' && ('DeviceOrientationEvent' in window || 'DeviceMotionEvent' in window);
   }
 
   /** Touch-first devices (tablets, phones) get tilt by default. */
@@ -79,27 +101,40 @@ export class TiltInput implements SteeringInput {
   }
 
   /** Call from a user gesture (iOS asks for permission). Resolves false if unavailable. */
-  async enable(): Promise<boolean> {
-    if (!TiltInput.isSupported()) return false;
-    if (this.listening) return true;
-    const Ctor = DeviceOrientationEvent as PermissionedOrientationEvent;
-    if (typeof Ctor.requestPermission === 'function') {
-      try {
-        if ((await Ctor.requestPermission()) !== 'granted') return false;
-      } catch {
-        return false;
-      }
-    }
-    window.addEventListener('deviceorientation', this.onOrientation);
-    this.listening = true;
-    this.center = null;
-    return true;
+  enable(): Promise<boolean> {
+    if (!TiltInput.isSupported()) return Promise.resolve(false);
+    if (this.listening) return Promise.resolve(true);
+    if (this.pending) return this.pending;
+    const generation = ++this.generation;
+    const orientation = typeof DeviceOrientationEvent === 'undefined' ? undefined : DeviceOrientationEvent as PermissionedSensor;
+    const motion = typeof DeviceMotionEvent === 'undefined' ? undefined : DeviceMotionEvent as PermissionedSensor;
+    // Both requests start synchronously in the same user gesture (required by iOS).
+    this.pending = Promise.all([requestSensor(orientation), requestSensor(motion)]).then(([o, m]) => {
+      if (generation !== this.generation) return false;
+      if (!o && !m) return false;
+      if (o) window.addEventListener('deviceorientation', this.onOrientation);
+      if (m) window.addEventListener('devicemotion', this.onMotion);
+      this.listening = true;
+      this.recenter();
+      return true;
+    }).finally(() => {
+      if (generation === this.generation) this.pending = null;
+    });
+    return this.pending;
   }
 
   disable(): void {
+    this.generation++;
+    this.pending = null;
     window.removeEventListener('deviceorientation', this.onOrientation);
+    window.removeEventListener('devicemotion', this.onMotion);
     this.listening = false;
+    this.lastOrientationAt = -Infinity;
+    this.lastEventAt = -Infinity;
+    this.source = null;
+    this.screenAngle = null;
     this.raw = null;
+    this.center = null;
     this.smoothed = 0;
   }
 
@@ -109,7 +144,11 @@ export class TiltInput implements SteeringInput {
 
   /** True once real orientation events are arriving. */
   hasSignal(): boolean {
-    return this.listening && this.raw !== null && performance.now() - this.lastEventAt < 1000;
+    return this.listening && this.raw !== null && performance.now() - this.lastEventAt < SIGNAL_TIMEOUT;
+  }
+
+  getSignalSource(): TiltSource | null {
+    return this.hasSignal() ? this.source : null;
   }
 
   /** The next reading becomes "straight ahead". */
@@ -123,7 +162,7 @@ export class TiltInput implements SteeringInput {
   }
 
   update(dtMs: number): void {
-    if (this.raw === null || this.center === null) {
+    if (!this.hasSignal() || this.raw === null || this.center === null) {
       this.smoothed = 0;
       return;
     }
@@ -144,9 +183,34 @@ export class TiltInput implements SteeringInput {
   }
 
   private readonly onOrientation = (e: DeviceOrientationEvent): void => {
-    if (e.beta === null || e.gamma === null) return;
-    this.raw = tiltAngleDeg(e.beta, e.gamma, currentScreenAngle());
-    this.lastEventAt = performance.now();
-    this.center ??= this.raw;
+    if (typeof e.beta !== 'number' || typeof e.gamma !== 'number' ||
+        !Number.isFinite(e.beta) || !Number.isFinite(e.gamma)) return;
+    const now = performance.now();
+    this.lastOrientationAt = now;
+    const screenAngle = currentScreenAngle();
+    this.accept(tiltAngleDeg(e.beta, e.gamma, screenAngle), screenAngle, 'orientation', now);
   };
+
+  private readonly onMotion = (e: DeviceMotionEvent): void => {
+    const now = performance.now();
+    // Prefer the browser's fused orientation while it supplies valid readings.
+    if (now - this.lastOrientationAt < SIGNAL_TIMEOUT) return;
+    const a = e.accelerationIncludingGravity;
+    if (!a || typeof a.x !== 'number' || typeof a.y !== 'number' || typeof a.z !== 'number') return;
+    const g = motionGravity(a.x, a.y, a.z);
+    if (!g) return;
+    const screenAngle = currentScreenAngle();
+    this.accept(tiltFromGravity(g.gx, g.gy, screenAngle), screenAngle, 'motion', now);
+  };
+
+  private accept(angle: number, screenAngle: number, source: TiltSource, now: number): void {
+    if (this.source !== source || this.screenAngle !== screenAngle || now - this.lastEventAt >= SIGNAL_TIMEOUT) {
+      this.recenter();
+    }
+    this.source = source;
+    this.screenAngle = screenAngle;
+    this.raw = angle;
+    this.lastEventAt = now;
+    this.center ??= angle;
+  }
 }

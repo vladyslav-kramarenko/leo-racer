@@ -95,6 +95,12 @@ async function main(): Promise<void> {
     return ok ? 'on' : 'unavailable';
   };
   const tiltStatus = (): TiltStatus => (game.input.tilt.isEnabled() ? 'on' : tiltFailed ? 'unavailable' : 'off');
+  const tiltSignal = () => {
+    const tilt = game.input.tilt;
+    if (!tilt.isEnabled()) return '';
+    const source = tilt.getSignalSource();
+    return source ? `${source === 'orientation' ? 'Orientation' : 'Accelerometer'}: ${tilt.getRelativeAngle().toFixed(0)}°` : 'No sensor signal. Move the device or retry access.';
+  };
 
   const collectDiagnostics = () =>
     game.metrics.export({
@@ -175,6 +181,7 @@ async function main(): Promise<void> {
         game.setTrafficDensity(density);
       },
       tiltStatus,
+      tiltSignal,
       setTiltEnabled: async (enabled) => {
         settings = saveSettings({ tiltEnabled: enabled });
         if (!enabled) {
@@ -203,10 +210,10 @@ async function main(): Promise<void> {
   menu.mount(root);
 
   const startDriving = (fullscreen: boolean) => {
-    if (fullscreen) void toggleFullscreen();
-    audio.start(preset.audio);
-    // Must run inside the click: iOS only grants motion permission from a user gesture.
+    // Request sensor access before fullscreen can consume the user activation.
     if (wantsTilt()) void enableTilt();
+    audio.start(preset.audio);
+    if (fullscreen) void toggleFullscreen();
     game.startDriving();
     // Parent gestures only once driving started, so the start screen stays simple.
     new ParentGesture(menu).attach(root);

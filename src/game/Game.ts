@@ -304,7 +304,7 @@ export class Game {
         ? `axis ${cal.throttle.axis}: ${Math.round(this.input.gamepad.getThrottle() * 100)}%`
         : '(not calibrated)',
       normalizedSteering: this.input.getSteering(),
-      tilt: !tilt.isEnabled() ? 'off' : tilt.hasSignal() ? `${tilt.getRelativeAngle().toFixed(1)}° → ${tilt.getSteering().toFixed(2)}` : 'no signal',
+      tilt: !tilt.isEnabled() ? 'off' : tilt.hasSignal() ? `${tilt.getSignalSource()}: ${tilt.getRelativeAngle().toFixed(1)}° → ${tilt.getSteering().toFixed(2)}` : 'no signal',
       speedKmh: this.vehicle.state.speed * 3.6,
       braking: this.vehicle.state.braking,
       mode: this.mixer.getMode(),
