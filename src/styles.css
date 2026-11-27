@@ -570,7 +570,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 999px;
   background: rgba(24, 34, 46, 0.32);
-  opacity: 0.68;
+  opacity: 0.52;
   transition: opacity 160ms ease, background-color 160ms ease;
   color: #fff;
   font: inherit;
