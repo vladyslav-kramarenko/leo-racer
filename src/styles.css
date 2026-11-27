@@ -97,7 +97,6 @@ body {
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  transform-origin: 50% 85%;
 }
 
 .leo-mascot-button:focus-visible {
@@ -106,20 +105,22 @@ body {
   border-radius: 18px;
 }
 
-.leo-mascot-button.reacting {
-  animation: leo-hello 550ms ease-out;
+/* The cropped torso stays rooted; only the upper silhouette sways and stretches.
+   Keeping the button itself still also preserves the touch target. */
+.leo-mascot-button.reacting .leo-mascot {
+  animation: leo-hello 640ms ease-in-out;
 }
 
 @keyframes leo-hello {
   0%, 100% { transform: none; }
-  15% { transform: scale(1.06, 0.91); }
-  42% { transform: translateY(-10px) rotate(-5deg) scale(1.05); }
-  66% { transform: translateY(-3px) rotate(4deg) scale(1.03); }
-  85% { transform: scale(1.03, 0.96); }
+  18% { transform: scaleY(0.96) skewX(1deg); }
+  43% { transform: scaleY(1.055) skewX(-2.5deg); }
+  68% { transform: scaleY(1.015) skewX(2deg); }
+  86% { transform: scaleY(0.99) skewX(-0.5deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .leo-mascot-button.reacting { animation: leo-hello-reduced 400ms ease-out; }
+  .leo-mascot-button.reacting .leo-mascot { animation: leo-hello-reduced 400ms ease-out; }
   @keyframes leo-hello-reduced {
     0%, 100% { filter: none; }
     35% { filter: brightness(1.15); }
@@ -133,6 +134,10 @@ body {
   object-fit: contain;
   margin-bottom: -4px;
   pointer-events: none;
+  transform-origin: 50% 100%;
+  /* Soften the cropped chest edge without changing the image or its layout. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 88%, transparent 99%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 88%, transparent 99%);
 }
 
 @media (max-width: 600px) {
