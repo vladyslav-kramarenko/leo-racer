@@ -2,7 +2,7 @@
 export const CUB_ROAR_SECONDS = 0.68;
 export const TRAIN_CHUFF_SECONDS = 1.2;
 export const TRAIN_WHISTLE_SECONDS = 1.65;
-export const SANTA_MAGIC_SECONDS = 0.68;
+export const SANTA_MAGIC_SECONDS = 1.65;
 
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
 const smooth = (x: number) => { const t = clamp(x); return t * t * (3 - 2 * t); };
@@ -111,23 +111,39 @@ export function createTrainWhistle(rate: number): Float32Array {
   return normalize(samples, 0.75);
 }
 
-/** Original little wand flourish: rising, softly decaying bell partials, no hiss. */
+/** A longer magical sweep: an original celesta-like ascending cascade with
+ * a gentle glassy tail and sparse delayed reflections. No noise or sharp attacks. */
 export function createSantaMagic(rate: number): Float32Array {
   const samples = new Float32Array(Math.round(rate * SANTA_MAGIC_SECONDS));
-  const notes = [784, 1047, 1319, 1568, 2093];
+  // Fourteen notes over a little more than one second, then space for the resonance.
+  const notes = [523.25, 659.25, 783.99, 880, 1046.50, 1174.66, 1318.51,
+    1567.98, 1760, 2093, 2349.32, 2637.02, 3135.96, 3520];
+  const starts = [0, 0.105, 0.205, 0.30, 0.39, 0.48, 0.565, 0.645, 0.725,
+    0.80, 0.875, 0.95, 1.025, 1.10];
+  const strike = (age: number, pitch: number): number => {
+    if (age < 0 || age > 0.9) return 0;
+    const p = tau * pitch * age;
+    const attack = smooth(age / 0.025);
+    const tail = 1 - smooth((age - 0.65) / 0.25);
+    return attack * tail * (
+      0.78 * Math.sin(p) * Math.exp(-age * 5.5) +
+      0.18 * Math.sin(p * 2.003) * Math.exp(-age * 9) +
+      0.045 * Math.sin(p * 3.01) * Math.exp(-age * 13)
+    );
+  };
   for (let i = 0; i < samples.length; i++) {
     const t = i / rate;
     let value = 0;
     for (let k = 0; k < notes.length; k++) {
-      const age = t - k * 0.071;
-      if (age < 0) continue;
+      const age = t - starts[k];
       const pitch = notes[k];
-      const env = smooth(age / 0.012) * Math.exp(-age * 9);
-      value += (Math.sin(tau * pitch * age) + 0.18 * Math.sin(tau * pitch * 2.01 * age)) * env * (1 - k * 0.08);
+      const level = (0.6 + 0.4 * smooth(k / 6)) * (1 - 0.22 * smooth((k - 9) / 4));
+      value += level * (strike(age, pitch) + 0.19 * strike(age - 0.115, pitch)
+        + 0.09 * strike(age - 0.237, pitch));
     }
-    samples[i] = value * (1 - smooth((t - 0.51) / 0.17));
+    samples[i] = value * (1 - smooth((t - 1.27) / 0.38));
   }
-  return normalize(samples, 0.38);
+  return normalize(samples, 0.48);
 }
 
 /** One buffer makes the magic and laugh sequential, never overlapping. */
