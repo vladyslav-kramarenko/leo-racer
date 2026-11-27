@@ -92,6 +92,31 @@ test('Leo reacts to taps without starting the game', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('Leo peeks behind the wordmark in portrait and landscape', async ({ page }) => {
+  for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+    const mascot = page.getByTestId('leo-mascot');
+    await expect(mascot).toBeVisible();
+    const layout = await mascot.evaluate(img => {
+      const title = document.querySelector<HTMLElement>('.start-brand .title')!;
+      const mascotRect = img.getBoundingClientRect();
+      const titleRect = title.getBoundingClientRect();
+      const style = getComputedStyle(title);
+      return {
+        overlap: mascotRect.bottom - titleRect.top,
+        coversBottom: titleRect.bottom >= mascotRect.bottom,
+        titleInFront: Number(style.zIndex) > 0,
+        opaque: style.backgroundColor === 'rgb(38, 40, 44)',
+        centerAligned: Math.abs((mascotRect.left + mascotRect.right) - (titleRect.left + titleRect.right)) < 2,
+        withinViewport: titleRect.left >= 0 && titleRect.right <= window.innerWidth,
+      };
+    });
+    expect(layout.overlap).toBeGreaterThan(5);
+    expect(layout.coversBottom && layout.titleInFront && layout.opaque && layout.centerAligned && layout.withinViewport).toBe(true);
+  }
+});
+
 test('parent world selection resumes driving while entrance selection keeps the start screen', async ({ page }) => {
   test.setTimeout(120_000);
   const errors = trackErrors(page);

@@ -80,6 +80,9 @@ body {
 }
 
 .start-brand {
+  --mascot-width: min(76vw, 38vh, 320px);
+  --logo-overlap: calc(var(--mascot-width) * 0.13);
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -105,18 +108,18 @@ body {
   border-radius: 18px;
 }
 
-/* The cropped torso stays rooted; only the upper silhouette sways and stretches.
-   Keeping the button itself still also preserves the touch target. */
+/* Leo peeks over the opaque wordmark. Rigid rotation keeps his proportions;
+   the wordmark covers the cropped torso throughout the motion. */
 .leo-mascot-button.reacting .leo-mascot {
-  animation: leo-hello 640ms ease-in-out;
+  animation: leo-hello 650ms ease-in-out;
 }
 
 @keyframes leo-hello {
   0%, 100% { transform: none; }
-  18% { transform: scaleY(0.96) skewX(1deg); }
-  43% { transform: scaleY(1.055) skewX(-2.5deg); }
-  68% { transform: scaleY(1.015) skewX(2deg); }
-  86% { transform: scaleY(0.99) skewX(-0.5deg); }
+  18% { transform: rotate(4deg); }
+  43% { transform: rotate(-7deg); }
+  68% { transform: rotate(5deg); }
+  86% { transform: rotate(-2deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -129,15 +132,28 @@ body {
 
 .leo-mascot {
   display: block;
-  width: min(76vw, 38vh, 320px);
+  width: var(--mascot-width);
   height: auto;
   object-fit: contain;
-  margin-bottom: -4px;
   pointer-events: none;
-  transform-origin: 50% 100%;
-  /* Soften the cropped chest edge without changing the image or its layout. */
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 88%, transparent 99%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 88%, transparent 99%);
+  transform-origin: 50% 88%;
+}
+
+/* A continuous, opaque logo base also conceals the gap between LEO and RACER. */
+.start-brand .title {
+  position: relative;
+  z-index: 1;
+  margin-top: calc(0px - var(--logo-overlap));
+  padding: 0.06em 0.27em 0.12em;
+  border: 0.055em solid #ffcf40;
+  border-radius: 0.24em;
+  background: #26282c;
+  box-shadow: 0 0.065em 0 #181a1e, 0 0 0 0.035em #26282c;
+  font-size: clamp(36px, 9.4vw, 110px);
+  line-height: 1.05;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+  text-shadow: 0 0.045em 0 #a87317;
 }
 
 @media (max-width: 600px) {
@@ -167,19 +183,12 @@ body {
   }
 
   .start-brand {
-    flex-direction: row;
+    --mascot-width: min(32vw, clamp(72px, 27vh, 138px));
     justify-content: center;
-    gap: 8px;
   }
 
-  .leo-mascot {
-    width: clamp(52px, 21vh, 112px);
-    max-width: 24vw;
-    margin-bottom: 0;
-  }
-
-  .start-content .title {
-    font-size: clamp(28px, 6vw, 64px);
+  .start-brand .title {
+    font-size: clamp(27px, 5.5vw, 54px);
   }
 
   .start-content .start-button {
