@@ -148,7 +148,7 @@ async function main(): Promise<void> {
         game.input.setDefaultHorn(settings.defaultHorn);
       },
       previewHorn: () => {
-        audio.start(preset.audio);
+        audio.start(preset.audio, Boolean(preset.santaSleigh));
         audio.horn(settings.defaultHorn);
       },
       isFullscreen: () => !!document.fullscreenElement,
@@ -212,7 +212,7 @@ async function main(): Promise<void> {
   const startDriving = (fullscreen: boolean) => {
     // Request sensor access before fullscreen can consume the user activation.
     if (wantsTilt()) void enableTilt();
-    audio.start(preset.audio);
+    audio.start(preset.audio, Boolean(preset.santaSleigh));
     if (fullscreen) void toggleFullscreen();
     game.startDriving();
     // Parent gestures only once driving started, so the start screen stays simple.
@@ -222,7 +222,7 @@ async function main(): Promise<void> {
     startDriving(false);
     // Reload can suspend Web Audio; the next normal input unlocks it without a menu.
     const unlockAudio = () => {
-      audio.start(preset.audio);
+      audio.start(preset.audio, Boolean(preset.santaSleigh));
       if (wantsTilt()) void enableTilt();
       window.removeEventListener('pointerdown', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);

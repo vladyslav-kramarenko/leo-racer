@@ -6,7 +6,7 @@ import { createCubRoar, createTrainChuff, createTrainWhistle, createSantaGreetin
 const ENGINE_GAIN = 0.055;
 
 /**
- * All sounds are synthesised with Web Audio — no audio files, no licensing questions.
+ * Sounds are synthesised with Web Audio except Santa's locally bundled CC0 voice.
  * Engine: two detuned oscillators through a low-pass filter.
  * Ambience: a filtered noise bed plus occasional events chosen by the world preset
  * (construction clinks, birds, cows, waves, distant honks, bicycle bells, seagulls).
@@ -42,6 +42,7 @@ export class AudioManager {
   private santaLevel = 0;
   private santaGreeted = false;
   private santaBuffer: AudioBuffer | null = null;
+  private santaLoading: Promise<void> | null = null;
   private baseHz = 52;
   private whiteNoise: AudioBuffer | null = null;
   private waveNoise: AudioBuffer | null = null;
@@ -131,9 +132,8 @@ export class AudioManager {
         this.santaLevel = level;
         this.santaGain.gain.setTargetAtTime(level, ctx.currentTime, 0.12);
       }
-      if (active && this.enabled && !this.santaGreeted && shouldGreetSanta(distance, flightProgress)) {
+      if (active && this.enabled && !this.santaGreeted && this.santaBuffer && shouldGreetSanta(distance, flightProgress)) {
         this.santaGreeted = true;
-        this.santaBuffer ??= this.makeSound(ctx, createSantaGreeting);
         // Make the greeting the focus, including over passing-car air noise.
         const ambience = this.ambientGain;
         ambience?.gain.setTargetAtTime(0.22, ctx.currentTime, 0.06);
@@ -144,6 +144,24 @@ export class AudioManager {
         };
       }
     }
+  }
+
+  /** Load the small same-origin recording when Winter starts, not on every flypast. */
+  private preloadSanta(ctx: AudioContext): void {
+    if (this.santaLoading || this.santaBuffer) return;
+    this.santaLoading = fetch('/audio/santa-voice.mp3')
+      .then(response => {
+        if (!response.ok) throw new Error('Santa audio unavailable');
+        return response.arrayBuffer();
+      })
+      .then(bytes => ctx.decodeAudioData(bytes))
+      .then(voice => {
+        const samples = createSantaGreeting(ctx.sampleRate, voice.getChannelData(0));
+        const buffer = ctx.createBuffer(1, samples.length, ctx.sampleRate);
+        buffer.getChannelData(0).set(samples);
+        this.santaBuffer = buffer;
+      })
+      .catch(() => { /* No synthetic voice fallback; the game stays playable. */ });
   }
 
   private makeSound(ctx: AudioContext, generate: (rate: number) => Float32Array): AudioBuffer {
@@ -162,9 +180,11 @@ export class AudioManager {
   }
 
   /** Must be called from a user gesture (START DRIVING). */
-  start(preset: AudioPreset): void {
+  start(preset: AudioPreset, santa = false): void {
     const ctx = this.unlock();
-    if (!ctx || !this.master || this.engineOsc.length) return;
+    if (!ctx || !this.master) return;
+    if (santa) this.preloadSanta(ctx);
+    if (this.engineOsc.length) return;
     this.baseHz = preset.engineBaseHz;
 
     // Engine: soft and low — present, but not a drone. Oscillators → low-pass → gentle

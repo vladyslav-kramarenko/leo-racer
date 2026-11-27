@@ -2,9 +2,7 @@
 export const CUB_ROAR_SECONDS = 0.68;
 export const TRAIN_CHUFF_SECONDS = 1.2;
 export const TRAIN_WHISTLE_SECONDS = 1.65;
-export const SANTA_LAUGH_SECONDS = 1.55;
 export const SANTA_MAGIC_SECONDS = 0.68;
-export const SANTA_GREETING_SECONDS = SANTA_MAGIC_SECONDS + SANTA_LAUGH_SECONDS;
 
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
 const smooth = (x: number) => { const t = clamp(x); return t * t * (3 - 2 * t); };
@@ -113,33 +111,6 @@ export function createTrainWhistle(rate: number): Float32Array {
   return normalize(samples, 0.75);
 }
 
-/** A warm, rounded, voiced laugh. No broadband breath or raspy noise bed. */
-export function createSantaLaugh(rate: number): Float32Array {
-  const samples = new Float32Array(Math.round(rate * SANTA_LAUGH_SECONDS));
-  const bell = (x: number, center: number, width: number) => Math.exp(-0.5 * ((x - center) / width) ** 2);
-  let phase = 0;
-  for (let i = 0; i < samples.length; i++) {
-    const t = i / rate;
-    const syllable = Math.min(2, Math.floor(t / 0.46));
-    const age = t - syllable * 0.46;
-    const duration = syllable === 2 ? 0.55 : 0.35;
-    const pitch = [177, 166, 150][syllable] + 30 * Math.sin(Math.PI * clamp(age / duration)) - 24 * smooth(age / duration);
-    phase += tau * pitch * (1 + 0.012 * Math.sin(tau * 6 * t)) / rate;
-    const round = smooth(age / 0.16);
-    let voice = 0;
-    for (let k = 1; k <= 14; k++) {
-      const hz = k * pitch;
-      const weight = (0.25 + 0.95 * bell(hz, 570 - round * 130, 180) +
-        0.48 * bell(hz, 1100 - round * 230, 260) + 0.08 * bell(hz, 2400, 460)) / Math.pow(k, 0.85);
-      voice += Math.sin(k * phase) * weight;
-    }
-    const env = smooth(age / 0.055) * (1 - smooth((age - duration + 0.13) / 0.13));
-    const bounce = 0.85 + 0.15 * Math.sin(Math.PI * clamp(age / duration));
-    samples[i] = voice * env * bounce * (syllable === 2 ? 1 : 0.9);
-  }
-  return normalize(samples, 0.76);
-}
-
 /** Original little wand flourish: rising, softly decaying bell partials, no hiss. */
 export function createSantaMagic(rate: number): Float32Array {
   const samples = new Float32Array(Math.round(rate * SANTA_MAGIC_SECONDS));
@@ -160,12 +131,11 @@ export function createSantaMagic(rate: number): Float32Array {
 }
 
 /** One buffer makes the magic and laugh sequential, never overlapping. */
-export function createSantaGreeting(rate: number): Float32Array {
+export function createSantaGreeting(rate: number, voice: Float32Array): Float32Array {
   const magic = createSantaMagic(rate);
-  const laugh = createSantaLaugh(rate);
-  const samples = new Float32Array(Math.round(rate * SANTA_GREETING_SECONDS));
+  const samples = new Float32Array(magic.length + voice.length);
   samples.set(magic);
-  samples.set(laugh.subarray(0, samples.length - magic.length), magic.length);
+  samples.set(voice, magic.length);
   return samples;
 }
 

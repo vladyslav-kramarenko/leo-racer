@@ -34,7 +34,10 @@ THE SOFTWARE.
 
 ## Assets
 
-All 3D models (bus, props, terrain, sky), textures and sounds are **original**.
-They are generated procedurally in code (primitive geometry, canvas textures, Web Audio synthesis). No external asset files are used.
+All 3D models (bus, props, terrain, sky), textures and synthesized effects are **original** and generated procedurally in code. Santa's recorded greeting is the following locally bundled third-party asset.
+
+- `public/audio/santa-voice.mp3` — excerpt supplied by the project owner from [SantaClaus_HoHoHo.wav](https://freesound.org/people/Bollenator/sounds/325180/) by **Bollenator**, October 17, 2015.
+- License: [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/).
+- Adaptation: trim trailing silence, mono downmix, light filtering, level adjustment and MP3 compression. No external runtime request.
 
 If code or ideas from Paper Aquarium (MIT) are reused directly in the future, add its license notice here.
