@@ -304,7 +304,7 @@ export class AudioManager {
     }
     if (this.rainGain && Math.abs(target - this.rainLevel) > 0.005) {
       this.rainLevel = target;
-      this.rainGain.gain.setTargetAtTime(target * 0.065, ctx.currentTime, 0.12);
+      this.rainGain.gain.setTargetAtTime(target * 0.052, ctx.currentTime, 0.12);
     } else if (this.rainGain && target === 0 && this.rainLevel !== 0) {
       this.rainLevel = 0;
       this.rainGain.gain.setTargetAtTime(0, ctx.currentTime, 0.12);
