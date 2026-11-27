@@ -12,6 +12,7 @@ import { box, buildColoredGeometry, cone, makeCanvas, rbox } from './geometry';
 import { ObjectSpawner } from './ObjectSpawner';
 import type { HillsPreset, SkylinePreset, SkyPreset, TerrainPreset, WorldPreset } from './presets/types';
 import { createRng } from './random';
+import { createMountainRange } from './mountains';
 import { RoadGenerator } from './RoadGenerator';
 
 /**
@@ -201,6 +202,12 @@ function createHills(hills: HillsPreset): THREE.Mesh {
   const parts: Parameters<typeof buildColoredGeometry>[0] = [];
   const radius = CONFIG.camera.far * 0.75;
   const count = 46;
+  if (hills.snowCap) {
+    const mesh = new THREE.Mesh(createMountainRange(hills, radius, count),
+      new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, fog: false }));
+    mesh.frustumCulled = false;
+    return mesh;
+  }
   for (let i = 0; i < count; i++) {
     const angle = (i / count) * Math.PI * 2 + rng() * 0.08;
     const r = radius + rng() * 12;
@@ -215,16 +222,7 @@ function createHills(hills: HillsPreset): THREE.Mesh {
       position: [x, h / 2 - 1, z],
       rotation: [0, yaw, 0],
     });
-    if (hills.snowCap) {
-      // The top 30% of the same cone, slightly larger so it sits on the slopes.
-      const capH = h * 0.3;
-      parts.push({
-        geometry: cone(w * 0.3 * 1.04, capH, 7),
-        color: hills.snowCap,
-        position: [x, h - 1 - capH / 2 + 0.05, z],
-        rotation: [0, yaw, 0],
-      });
-    }
+
   }
   const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, fog: false });
   const mesh = new THREE.Mesh(buildColoredGeometry(parts), material);
