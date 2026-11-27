@@ -1,6 +1,6 @@
 import type { AmbientEvent, AudioPreset } from '../world/presets/types';
 import { DEFAULT_HORN, HORNS, normalizeHorn } from './horns';
-import { createCubRoar, createTrainChuff, createTrainWhistle, createSantaLaugh, distanceGain } from './characterSounds';
+import { createCubRoar, createTrainChuff, createTrainWhistle, createSantaLaugh, distanceGain, santaGreetingGain, shouldGreetSanta } from './characterSounds';
 
 /** Engine loudness at cruise. Kept low so the bus hums gently instead of droning. */
 const ENGINE_GAIN = 0.055;
@@ -116,11 +116,11 @@ export class AudioManager {
   }
 
   /** Santa's greeting once per flypast; distance and pause both control volume. */
-  setSantaSound(distance: number, active: boolean): void {
+  setSantaSound(distance: number, active: boolean, flightProgress: number | null = null): void {
     const ctx = this.ctx;
     if (!ctx || !this.master) return;
     if (!Number.isFinite(distance)) this.santaGreeted = false;
-    const level = active ? distanceGain(distance, 25, 190) * 0.43 : 0;
+    const level = active ? santaGreetingGain(distance) : 0;
     if (!this.santaGain && level > 0) {
       this.santaGain = ctx.createGain();
       this.santaGain.gain.value = 0;
@@ -131,7 +131,7 @@ export class AudioManager {
         this.santaLevel = level;
         this.santaGain.gain.setTargetAtTime(level, ctx.currentTime, 0.12);
       }
-      if (active && this.enabled && !this.santaGreeted && distance < 145) {
+      if (active && this.enabled && !this.santaGreeted && shouldGreetSanta(distance, flightProgress)) {
         this.santaGreeted = true;
         this.santaBuffer ??= this.makeSound(ctx, createSantaLaugh);
         const source = this.playBuffer(ctx, this.santaBuffer, this.santaGain);

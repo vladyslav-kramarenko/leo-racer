@@ -144,3 +144,13 @@ export function createSantaLaugh(rate: number): Float32Array {
 export function distanceGain(distance: number, near: number, far: number): number {
   return 1 - smooth((distance - near) / (far - near));
 }
+
+/** A sky flypast is deliberately audible much farther away than ground traffic. */
+export function santaGreetingGain(distance: number): number {
+  return distanceGain(distance, 125, 250) * 0.64;
+}
+
+/** Wait until the sleigh is crossing into the centre of the scene. */
+export function shouldGreetSanta(distance: number, flightProgress: number | null): boolean {
+  return flightProgress !== null && flightProgress >= 0.38 && distance < 210;
+}

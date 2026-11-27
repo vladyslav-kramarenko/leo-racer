@@ -32,6 +32,7 @@ export class SantaSleigh {
   }
 
   isFlying(): boolean { return this.flight.isFlying(); }
+  getFlightProgress(): number | null { return this.flight.getFlightProgress(); }
 
   update(dt: number, progress: number): void {
     if (dt <= 0) return;

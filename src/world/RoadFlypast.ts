@@ -29,6 +29,9 @@ export class RoadFlypast {
 
   isFlying(): boolean { return this.age !== null; }
 
+  /** Normalized crossing progress, or null when the model is hidden. */
+  getFlightProgress(): number | null { return this.age === null ? null : this.age / this.path.duration; }
+
   update(dt: number, progress: number): void {
     if (dt <= 0) return;
     const speed = Math.max(0, Math.min(50, (progress - this.previousProgress) / dt));

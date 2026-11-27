@@ -263,7 +263,7 @@ export class Game {
     const soundActive = this.driving && phase === 'running';
     if (this.world.freightRailway) this.audio.setTrainSound(this.world.freightRailway.soundDistance(this.busPosition), soundActive);
     const santa = this.world.santaSleigh;
-    if (santa) this.audio.setSantaSound(santa.isFlying() ? santa.group.position.distanceTo(this.busPosition) : Infinity, soundActive);
+    if (santa) this.audio.setSantaSound(santa.isFlying() ? santa.group.position.distanceTo(this.busPosition) : Infinity, soundActive, santa.getFlightProgress());
     this.traffic.update(dt, this.timeSec, { s: state.progress, d: state.lateralOffset });
     this.sprites.update(dt, state.progress, state.lateralOffset);
     this.cameraRig.update(dt, state.progress, state.lateralOffset, this.mixedSteer);

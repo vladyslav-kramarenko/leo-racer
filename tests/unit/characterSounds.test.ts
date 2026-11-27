@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createCubRoar, createTrainChuff, createTrainWhistle, createSantaLaugh, distanceGain,
+import { createCubRoar, createTrainChuff, createTrainWhistle, createSantaLaugh, distanceGain, santaGreetingGain, shouldGreetSanta,
   CUB_ROAR_SECONDS, TRAIN_CHUFF_SECONDS, TRAIN_WHISTLE_SECONDS, SANTA_LAUGH_SECONDS } from '../../src/audio/characterSounds';
 
 describe('procedural character sounds', () => {
@@ -21,6 +21,16 @@ describe('procedural character sounds', () => {
       expect(Math.abs(buffer[0])).toBeLessThan(0.01);
       expect(Math.abs(buffer[buffer.length - 1])).toBeLessThan(0.01);
     }
+  });
+  it('makes Santa audible at the normal sky-crossing distance and delays the greeting', () => {
+    expect(santaGreetingGain(120)).toBeCloseTo(0.64);
+    expect(santaGreetingGain(145)).toBeGreaterThan(0.55);
+    expect(santaGreetingGain(200)).toBeGreaterThan(0.2);
+    expect(santaGreetingGain(Infinity)).toBe(0);
+    expect(shouldGreetSanta(145, 0.1)).toBe(false);
+    expect(shouldGreetSanta(145, 0.4)).toBe(true);
+    expect(shouldGreetSanta(220, 0.5)).toBe(false);
+    expect(shouldGreetSanta(100, null)).toBe(false);
   });
   it('fades smoothly by distance and is silent outside range', () => {
     expect(distanceGain(0, 12, 115)).toBe(1);
