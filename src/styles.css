@@ -145,15 +145,19 @@ body {
   z-index: 1;
   margin-top: calc(0px - var(--logo-overlap));
   padding: 0.06em 0.27em 0.12em;
-  border: 0.055em solid #ffcf40;
-  border-radius: 0.24em;
-  background: #26282c;
-  box-shadow: 0 0.065em 0 #181a1e, 0 0 0 0.035em #26282c;
+  border: 0.045em solid #e9a83b;
+  border-radius: 0.32em;
+  background-color: #fff4cc;
+  background-image: linear-gradient(180deg, #fffdf1 0%, #fff0bd 100%);
+  box-shadow: 0 0.055em 0 #df9f3d, 0 0.09em 0.16em rgba(110, 77, 24, 0.16);
   font-size: clamp(36px, 9.4vw, 110px);
   line-height: 1.05;
   letter-spacing: 0.025em;
   white-space: nowrap;
-  text-shadow: 0 0.045em 0 #a87317;
+  color: #ffd34d;
+  -webkit-text-stroke: 0.035em #285b88;
+  paint-order: stroke fill;
+  text-shadow: 0 0.04em 0 #285b88, 0 0.065em 0 #efb845;
 }
 
 @media (max-width: 600px) {

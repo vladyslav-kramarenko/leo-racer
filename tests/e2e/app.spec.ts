@@ -107,7 +107,7 @@ test('Leo peeks behind the wordmark in portrait and landscape', async ({ page })
         overlap: mascotRect.bottom - titleRect.top,
         coversBottom: titleRect.bottom >= mascotRect.bottom,
         titleInFront: Number(style.zIndex) > 0,
-        opaque: style.backgroundColor === 'rgb(38, 40, 44)',
+        opaque: style.backgroundColor === 'rgb(255, 244, 204)',
         centerAligned: Math.abs((mascotRect.left + mascotRect.right) - (titleRect.left + titleRect.right)) < 2,
         withinViewport: titleRect.left >= 0 && titleRect.right <= window.innerWidth,
       };
