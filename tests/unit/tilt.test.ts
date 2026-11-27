@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { angleDiff, gravityFromEuler, tiltAngleDeg, tiltToSteering, toScreen, motionGravity, tiltFromGravity, TiltInput } from '../../src/input/TiltInput';
+import { angleDiff, gravityFromEuler, tiltAngleDeg, tiltToSteering, toScreen, motionGravity, tiltFromGravity, TiltInput, resolveScreenAngle, calibratedScreenAngle } from '../../src/input/TiltInput';
 import { isInZone } from '../../src/input/TouchBrake';
 
 const cfg = { deadZoneDeg: 4, fullLockDeg: 28 };
@@ -139,5 +139,35 @@ describe('motion fallback and live sensor lifecycle', () => {
       clock.mockRestore();
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe('iOS screen axes', () => {
+  it('prefers the physical legacy orientation on permission-based devices', () => {
+    expect(resolveScreenAngle(90, -90, true)).toBe(270);
+    expect(resolveScreenAngle(0, 90, true)).toBe(90);
+    expect(resolveScreenAngle(90, -90, false)).toBe(90);
+    expect(resolveScreenAngle(undefined, -90, false)).toBe(270);
+  });
+
+  it('corrects a quarter-turn or reversed axis only at neutral', () => {
+    expect(calibratedScreenAngle(-1, 0, 0)).toBe(90);
+    expect(calibratedScreenAngle(1, 0, 90)).toBe(270);
+    expect(calibratedScreenAngle(0, -1, 90)).toBe(0);
+    expect(calibratedScreenAngle(-0.2, 0, 0)).toBe(0);
+    expect(calibratedScreenAngle(-0.9, -0.3, 90)).toBe(90);
+  });
+
+  it.each([0, 90, 270])('pitch is neutral and wheel rotation is steering at screen angle %i', (angle) => {
+    const a = angle * Math.PI / 180;
+    const toDevice = (sx: number, sy: number) => ({ gx: sx * Math.cos(a) + sy * Math.sin(a), gy: -sx * Math.sin(a) + sy * Math.cos(a) });
+    for (const down of [0.3, 0.7, 1]) {
+      const g = toDevice(0, -down);
+      expect(tiltFromGravity(g.gx, g.gy, angle)).toBeCloseTo(0);
+    }
+    const right = toDevice(Math.sin(Math.PI / 6), -Math.cos(Math.PI / 6));
+    const left = toDevice(-Math.sin(Math.PI / 6), -Math.cos(Math.PI / 6));
+    expect(tiltFromGravity(right.gx, right.gy, angle)).toBeCloseTo(30);
+    expect(tiltFromGravity(left.gx, left.gy, angle)).toBeCloseTo(-30);
   });
 });

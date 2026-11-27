@@ -54,11 +54,37 @@ export function tiltToSteering(angleDeg: number, centerDeg: number, cfg: { deadZ
   return applyDeadzone(normalized, cfg.deadZoneDeg / cfg.fullLockDeg);
 }
 
-function currentScreenAngle(): number {
-  let angle = typeof screen !== 'undefined' ? screen.orientation?.angle : undefined;
-  // Older iOS Safari only has the legacy window.orientation (90 / -90).
-  angle ??= (window as unknown as { orientation?: number }).orientation ?? 0;
+/** Safari has reported inverted landscape angles via ScreenOrientation (WebKit #254863).
+ * On permission-based iOS sensor implementations prefer the legacy physical angle. */
+export function resolveScreenAngle(modern: number | undefined, legacy: number | undefined, preferLegacy: boolean): number {
+  const valid = (a: number | undefined): a is number => typeof a === 'number' && Number.isFinite(a) && a % 90 === 0;
+  const angle = preferLegacy && valid(legacy) ? legacy : valid(modern) ? modern : valid(legacy) ? legacy : 0;
   return ((angle % 360) + 360) % 360;
+}
+
+function permissionBasedSensors(): boolean {
+  return (typeof DeviceOrientationEvent !== 'undefined' &&
+    typeof (DeviceOrientationEvent as PermissionedSensor).requestPermission === 'function') ||
+    (typeof DeviceMotionEvent !== 'undefined' &&
+    typeof (DeviceMotionEvent as PermissionedSensor).requestPermission === 'function');
+}
+
+function currentScreenAngle(): number {
+  const modern = typeof screen !== 'undefined' ? screen.orientation?.angle : undefined;
+  const legacy = (window as unknown as { orientation?: number }).orientation;
+  return resolveScreenAngle(modern, legacy, permissionBasedSensors());
+}
+
+/** At neutral calibration only, correct clearly inconsistent sensor axes.
+ * The phone is held upright like a wheel: gravity should point mostly screen-down.
+ * Never infer an axis from a nearly flat device or remap while steering. */
+export function calibratedScreenAngle(gx: number, gy: number, reported: number): number {
+  const magnitude = Math.hypot(gx, gy);
+  if (magnitude < 0.6) return reported;
+  if (-toScreen(gx, gy, reported).sy >= 0.5 * magnitude) return reported;
+  const best = [0, 90, 180, 270].reduce((a, b) =>
+    toScreen(gx, gy, b).sy < toScreen(gx, gy, a).sy ? b : a, reported);
+  return -toScreen(gx, gy, best).sy >= 0.85 * magnitude ? best : reported;
 }
 
 type PermissionedSensor = { requestPermission?: () => Promise<'granted' | 'denied'> };
@@ -85,6 +111,8 @@ export class TiltInput implements SteeringInput {
   private lastEventAt = -Infinity;
   private lastOrientationAt = -Infinity;
   private screenAngle: number | null = null;
+  private steeringAngle: number | null = null;
+  private gravity: { gx: number; gy: number } | null = null;
   private source: TiltSource | null = null;
   private pending: Promise<boolean> | null = null;
   private generation = 0;
@@ -133,6 +161,8 @@ export class TiltInput implements SteeringInput {
     this.lastEventAt = -Infinity;
     this.source = null;
     this.screenAngle = null;
+    this.steeringAngle = null;
+    this.gravity = null;
     this.raw = null;
     this.center = null;
     this.smoothed = 0;
@@ -154,7 +184,14 @@ export class TiltInput implements SteeringInput {
   /** The next reading becomes "straight ahead". */
   recenter(): void {
     this.center = null;
+    this.steeringAngle = null;
     this.smoothed = 0;
+  }
+
+  /** Local diagnostic only: reported screen angle, calibrated axis and gravity components. */
+  getAxisDiagnostics(): string {
+    if (!this.hasSignal() || !this.gravity) return '';
+    return `screen ${this.screenAngle}° / axis ${this.steeringAngle}° · x ${this.gravity.gx.toFixed(2)} y ${this.gravity.gy.toFixed(2)}`;
   }
 
   setInverted(invert: boolean): void {
@@ -188,7 +225,8 @@ export class TiltInput implements SteeringInput {
     const now = performance.now();
     this.lastOrientationAt = now;
     const screenAngle = currentScreenAngle();
-    this.accept(tiltAngleDeg(e.beta, e.gamma, screenAngle), screenAngle, 'orientation', now);
+    const { gx, gy } = gravityFromEuler(e.beta, e.gamma);
+    this.accept(gx, gy, screenAngle, 'orientation', now);
   };
 
   private readonly onMotion = (e: DeviceMotionEvent): void => {
@@ -200,17 +238,20 @@ export class TiltInput implements SteeringInput {
     const g = motionGravity(a.x, a.y, a.z);
     if (!g) return;
     const screenAngle = currentScreenAngle();
-    this.accept(tiltFromGravity(g.gx, g.gy, screenAngle), screenAngle, 'motion', now);
+    this.accept(g.gx, g.gy, screenAngle, 'motion', now);
   };
 
-  private accept(angle: number, screenAngle: number, source: TiltSource, now: number): void {
+  private accept(gx: number, gy: number, screenAngle: number, source: TiltSource, now: number): void {
     if (this.source !== source || this.screenAngle !== screenAngle || now - this.lastEventAt >= SIGNAL_TIMEOUT) {
       this.recenter();
     }
     this.source = source;
     this.screenAngle = screenAngle;
-    this.raw = angle;
+    this.gravity = { gx, gy };
+    // Only permission-based mobile sensors need this compatibility calibration.
+    this.steeringAngle ??= permissionBasedSensors() ? calibratedScreenAngle(gx, gy, screenAngle) : screenAngle;
+    this.raw = tiltFromGravity(gx, gy, this.steeringAngle);
     this.lastEventAt = now;
-    this.center ??= angle;
+    this.center ??= this.raw;
   }
 }

@@ -99,7 +99,7 @@ async function main(): Promise<void> {
     const tilt = game.input.tilt;
     if (!tilt.isEnabled()) return '';
     const source = tilt.getSignalSource();
-    return source ? `${source === 'orientation' ? 'Orientation' : 'Accelerometer'}: ${tilt.getRelativeAngle().toFixed(0)}°` : 'No sensor signal. Move the device or retry access.';
+    return source ? `${source === 'orientation' ? 'Orientation' : 'Accelerometer'}: ${tilt.getRelativeAngle().toFixed(0)}° · ${tilt.getAxisDiagnostics()}` : 'No sensor signal. Move the device or retry access.';
   };
 
   const collectDiagnostics = () =>
