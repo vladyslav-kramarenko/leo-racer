@@ -33,6 +33,9 @@ export const nature: WorldPreset = {
         facing: 'traffic', roadCentered: true, every: { chunks: 8, offset: 2 } },
     ],
   },
+  // An early shower introduces the weather; later showers are uncommon.
+  weather: { firstRainSec: 15, clearIntervalSec: [60, 120], rainDurationSec: [10, 14],
+    rainbowDurationSec: 16, rainbowChance: 0.5, firstRainbow: true, drops: 240 },
   traffic: { enabled: true, vehicles: ['car', 'camper', 'van', 'pickup'] },
   audio: { engineBaseHz: 50, ambience: { noiseLevel: 0.035, noiseCutoff: 550, events: ['chirp'], eventInterval: [3, 7] } },
 };

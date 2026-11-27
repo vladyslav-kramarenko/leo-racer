@@ -4,6 +4,7 @@ import { ChunkManager } from './ChunkManager';
 import { Guideway } from './Guideway';
 import { FreightRailway } from './FreightRailway';
 import { Snowfall } from './Snowfall';
+import { NatureWeather } from './NatureWeather';
 import { SantaSleigh } from './SantaSleigh';
 import { CropDuster } from './CropDuster';
 import { NightLighting } from './NightLighting';
@@ -33,6 +34,10 @@ export class WorldManager {
   readonly guideway: Guideway | null;
   readonly freightRailway: FreightRailway | null;
   readonly snowfall: Snowfall | null;
+  readonly weather: NatureWeather | null;
+  private readonly hemi: THREE.HemisphereLight;
+  private readonly clearTint = new THREE.Color('#ffffff');
+  private readonly rainTint = new THREE.Color('#b9c3ce');
   readonly santaSleigh: SantaSleigh | null;
   readonly cropDuster: CropDuster | null;
   private readonly sun: THREE.DirectionalLight;
@@ -47,10 +52,10 @@ export class WorldManager {
     scene.fog = new THREE.Fog(preset.sky.fogColor, preset.sky.fogNear, preset.sky.fogFar);
     scene.background = new THREE.Color(preset.sky.horizon);
 
-    const hemi = new THREE.HemisphereLight(preset.sky.hemiSky, preset.sky.hemiGround, preset.sky.hemiIntensity);
+    this.hemi = new THREE.HemisphereLight(preset.sky.hemiSky, preset.sky.hemiGround, preset.sky.hemiIntensity);
     this.sun = new THREE.DirectionalLight(preset.sky.sunColor, preset.sky.sunIntensity);
     this.sun.position.set(-40, 80, 30);
-    this.group.add(hemi, this.sun, this.sun.target);
+    this.group.add(this.hemi, this.sun, this.sun.target);
 
     this.sky = createSkyDome(preset.sky);
     this.hills = createHills(preset.sky.hills);
@@ -91,6 +96,8 @@ export class WorldManager {
     this.chunks.reset(0);
     this.snowfall = preset.snowfall ? new Snowfall(preset.snowfall.count, preset.snowfall.speed) : null;
     if (this.snowfall) this.group.add(this.snowfall.points);
+    this.weather = preset.weather ? new NatureWeather(preset.weather) : null;
+    if (this.weather) this.group.add(this.weather.group);
     this.santaSleigh = preset.santaSleigh ? new SantaSleigh(this.road, preset.santaSleigh) : null;
     if (this.santaSleigh) this.group.add(this.santaSleigh.group);
     this.cropDuster = preset.cropDuster ? new CropDuster(this.road, preset.cropDuster) : null;
@@ -100,12 +107,18 @@ export class WorldManager {
   }
 
   /** Keep the endless world centred around the vehicle and animate props. */
-  update(progress: number, focus: THREE.Vector3, timeSec: number, dt = 0): void {
+  update(progress: number, focus: THREE.Vector3, timeSec: number, dt = 0, weatherActive = false): void {
     this.chunks.update(progress);
     this.props.animate(timeSec);
     this.guideway?.update(dt, progress);
     this.freightRailway?.update(dt, progress);
     this.snowfall?.update(dt, focus);
+    if (this.weather) {
+      const { rain } = this.weather.update(dt, focus, Math.atan(this.road.slope(progress)), weatherActive);
+      this.sun.intensity = this.preset.sky.sunIntensity * (1 - 0.42 * rain);
+      this.hemi.intensity = this.preset.sky.hemiIntensity * (1 - 0.12 * rain);
+      (this.sky.material as THREE.MeshBasicMaterial).color.copy(this.clearTint).lerp(this.rainTint, rain * 0.65);
+    }
     this.santaSleigh?.update(dt, progress);
     this.cropDuster?.update(dt, progress);
     this.nightLighting?.update(progress, focus);

@@ -22,6 +22,8 @@ export class AudioManager {
   private accelerationOsc: OscillatorNode | null = null;
   private accelerationGain: GainNode | null = null;
   private ambientGain: GainNode | null = null;
+  private rainGain: GainNode | null = null;
+  private rainLevel = 0;
   private enabled = true;
   private ducked = false;
   private nextEvent = 3;
@@ -227,6 +229,34 @@ export class AudioManager {
         const [min, max] = this.eventInterval;
         this.nextEvent = min + Math.random() * (max - min);
       }
+    }
+  }
+
+  /** A soft filtered shower; lazy loop, silence outside rain and while paused. */
+  setRainLevel(level: number): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.master) return;
+    const target = Math.max(0, Math.min(1, level));
+    if (!this.rainGain && target > 0) {
+      this.whiteNoise ??= createWhiteNoise(ctx, 1);
+      const source = ctx.createBufferSource();
+      source.buffer = this.whiteNoise;
+      source.loop = true;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1150;
+      filter.Q.value = 0.45;
+      this.rainGain = ctx.createGain();
+      this.rainGain.gain.value = 0;
+      source.connect(filter).connect(this.rainGain).connect(this.master);
+      source.start();
+    }
+    if (this.rainGain && Math.abs(target - this.rainLevel) > 0.005) {
+      this.rainLevel = target;
+      this.rainGain.gain.setTargetAtTime(target * 0.065, ctx.currentTime, 0.12);
+    } else if (this.rainGain && target === 0 && this.rainLevel !== 0) {
+      this.rainLevel = 0;
+      this.rainGain.gain.setTargetAtTime(0, ctx.currentTime, 0.12);
     }
   }
 

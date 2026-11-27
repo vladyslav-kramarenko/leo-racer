@@ -246,6 +246,16 @@ export interface GuidewayPreset {
   };
 }
 
+export interface WeatherPreset {
+  firstRainSec: number;
+  clearIntervalSec: [number, number];
+  rainDurationSec: [number, number];
+  rainbowDurationSec: number;
+  rainbowChance: number;
+  firstRainbow: boolean;
+  drops: number;
+}
+
 export interface WorldPreset {
   id: string;
   name: string;
@@ -260,6 +270,7 @@ export interface WorldPreset {
   freightRailway?: FreightRailwayPreset;
   /** A fixed pool of gently falling snowflakes around the player. */
   snowfall?: { count: number; speed: number };
+  weather?: WeatherPreset;
   santaSleigh?: FlypastPreset;
   cropDuster?: FlypastPreset;
   audio: AudioPreset;
