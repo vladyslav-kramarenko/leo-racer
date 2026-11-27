@@ -136,7 +136,7 @@ export function createSantaMagic(rate: number): Float32Array {
     let value = 0;
     for (let k = 0; k < notes.length; k++) {
       const age = t - starts[k];
-      const pitch = notes[k];
+      const pitch = notes[k] * Math.pow(2, 5 / 12); // Five semitones higher, same tempo and contour.
       const level = (0.6 + 0.4 * smooth(k / 6)) * (1 - 0.22 * smooth((k - 9) / 4));
       value += level * (strike(age, pitch) + 0.19 * strike(age - 0.115, pitch)
         + 0.09 * strike(age - 0.237, pitch));
