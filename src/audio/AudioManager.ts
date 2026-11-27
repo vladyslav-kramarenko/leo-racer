@@ -1,6 +1,6 @@
 import type { AmbientEvent, AudioPreset } from '../world/presets/types';
 import { DEFAULT_HORN, HORNS, normalizeHorn } from './horns';
-import { createCubRoar, createTrainChuff, createTrainWhistle, createSantaLaugh, distanceGain, santaGreetingGain, shouldGreetSanta } from './characterSounds';
+import { createCubRoar, createTrainChuff, createTrainWhistle, createSantaGreeting, distanceGain, santaGreetingGain, shouldGreetSanta } from './characterSounds';
 
 /** Engine loudness at cruise. Kept low so the bus hums gently instead of droning. */
 const ENGINE_GAIN = 0.055;
@@ -133,9 +133,15 @@ export class AudioManager {
       }
       if (active && this.enabled && !this.santaGreeted && shouldGreetSanta(distance, flightProgress)) {
         this.santaGreeted = true;
-        this.santaBuffer ??= this.makeSound(ctx, createSantaLaugh);
+        this.santaBuffer ??= this.makeSound(ctx, createSantaGreeting);
+        // Make the greeting the focus, including over passing-car air noise.
+        const ambience = this.ambientGain;
+        ambience?.gain.setTargetAtTime(0.22, ctx.currentTime, 0.06);
         const source = this.playBuffer(ctx, this.santaBuffer, this.santaGain);
-        source.onended = () => source.disconnect();
+        source.onended = () => {
+          source.disconnect();
+          ambience?.gain.setTargetAtTime(1, ctx.currentTime, 0.18);
+        };
       }
     }
   }
@@ -356,7 +362,7 @@ export class AudioManager {
     g.gain.setValueAtTime(0, now);
     g.gain.linearRampToValueAtTime(0.035, now + 0.45);
     g.gain.linearRampToValueAtTime(0, now + 1.5);
-    osc.connect(lp).connect(g).connect(this.master);
+    osc.connect(lp).connect(g).connect(this.ambientGain ?? this.master);
     osc.start(now);
     osc.stop(now + 1.55);
 
@@ -372,7 +378,7 @@ export class AudioManager {
     ng.gain.setValueAtTime(0, now);
     ng.gain.linearRampToValueAtTime(0.06, now + 0.5);
     ng.gain.linearRampToValueAtTime(0, now + 1.45);
-    noise.connect(nf).connect(ng).connect(this.master);
+    noise.connect(nf).connect(ng).connect(this.ambientGain ?? this.master);
     noise.start(now);
     noise.stop(now + 1.5);
   }

@@ -3,6 +3,8 @@ export const CUB_ROAR_SECONDS = 0.68;
 export const TRAIN_CHUFF_SECONDS = 1.2;
 export const TRAIN_WHISTLE_SECONDS = 1.65;
 export const SANTA_LAUGH_SECONDS = 1.55;
+export const SANTA_MAGIC_SECONDS = 0.68;
+export const SANTA_GREETING_SECONDS = SANTA_MAGIC_SECONDS + SANTA_LAUGH_SECONDS;
 
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
 const smooth = (x: number) => { const t = clamp(x); return t * t * (3 - 2 * t); };
@@ -111,33 +113,60 @@ export function createTrainWhistle(rate: number): Float32Array {
   return normalize(samples, 0.75);
 }
 
-/** Three individually articulated "ho" syllables with rounded vowel formants. */
+/** A warm, rounded, voiced laugh. No broadband breath or raspy noise bed. */
 export function createSantaLaugh(rate: number): Float32Array {
   const samples = new Float32Array(Math.round(rate * SANTA_LAUGH_SECONDS));
-  const noise = noiseGenerator(369);
-  const f1 = resonator(rate, 460, 120);
-  const f2 = resonator(rate, 870, 150);
-  const f3 = resonator(rate, 2500, 400);
-  const airy = resonator(rate, 1700, 1400);
-  let phase = 0, prev = 0;
+  const bell = (x: number, center: number, width: number) => Math.exp(-0.5 * ((x - center) / width) ** 2);
+  let phase = 0;
   for (let i = 0; i < samples.length; i++) {
     const t = i / rate;
     const syllable = Math.min(2, Math.floor(t / 0.46));
     const age = t - syllable * 0.46;
     const duration = syllable === 2 ? 0.55 : 0.35;
-    const n = noise();
-    const pitch = [177, 166, 150][syllable] + 20 * Math.sin(Math.PI * clamp(age / duration)) - 26 * smooth(age / duration);
-    phase = (phase + pitch / rate) % 1;
-    const pulse = Math.pow(Math.sin(Math.PI * phase), 3);
-    const glottal = (pulse - prev) * 7;
-    prev = pulse;
-    const voicing = smooth((age - 0.045) / 0.055);
-    const aspiration = airy(n) * 0.3 * (1 - voicing);
-    const voice = f1(glottal) * 0.7 + f2(glottal) * 0.48 + f3(glottal) * 0.1;
-    const env = smooth(age / 0.035) * (1 - smooth((age - duration + 0.1) / 0.1));
-    samples[i] = (aspiration + voice * voicing * (0.9 + 0.1 * Math.sin(tau * age * 19))) * env;
+    const pitch = [177, 166, 150][syllable] + 30 * Math.sin(Math.PI * clamp(age / duration)) - 24 * smooth(age / duration);
+    phase += tau * pitch * (1 + 0.012 * Math.sin(tau * 6 * t)) / rate;
+    const round = smooth(age / 0.16);
+    let voice = 0;
+    for (let k = 1; k <= 14; k++) {
+      const hz = k * pitch;
+      const weight = (0.25 + 0.95 * bell(hz, 570 - round * 130, 180) +
+        0.48 * bell(hz, 1100 - round * 230, 260) + 0.08 * bell(hz, 2400, 460)) / Math.pow(k, 0.85);
+      voice += Math.sin(k * phase) * weight;
+    }
+    const env = smooth(age / 0.055) * (1 - smooth((age - duration + 0.13) / 0.13));
+    const bounce = 0.85 + 0.15 * Math.sin(Math.PI * clamp(age / duration));
+    samples[i] = voice * env * bounce * (syllable === 2 ? 1 : 0.9);
   }
-  return normalize(samples, 0.7);
+  return normalize(samples, 0.76);
+}
+
+/** Original little wand flourish: rising, softly decaying bell partials, no hiss. */
+export function createSantaMagic(rate: number): Float32Array {
+  const samples = new Float32Array(Math.round(rate * SANTA_MAGIC_SECONDS));
+  const notes = [784, 1047, 1319, 1568, 2093];
+  for (let i = 0; i < samples.length; i++) {
+    const t = i / rate;
+    let value = 0;
+    for (let k = 0; k < notes.length; k++) {
+      const age = t - k * 0.071;
+      if (age < 0) continue;
+      const pitch = notes[k];
+      const env = smooth(age / 0.012) * Math.exp(-age * 9);
+      value += (Math.sin(tau * pitch * age) + 0.18 * Math.sin(tau * pitch * 2.01 * age)) * env * (1 - k * 0.08);
+    }
+    samples[i] = value * (1 - smooth((t - 0.51) / 0.17));
+  }
+  return normalize(samples, 0.38);
+}
+
+/** One buffer makes the magic and laugh sequential, never overlapping. */
+export function createSantaGreeting(rate: number): Float32Array {
+  const magic = createSantaMagic(rate);
+  const laugh = createSantaLaugh(rate);
+  const samples = new Float32Array(Math.round(rate * SANTA_GREETING_SECONDS));
+  samples.set(magic);
+  samples.set(laugh.subarray(0, samples.length - magic.length), magic.length);
+  return samples;
 }
 
 /** Smooth audibility: full nearby, silent at the outer radius. */
@@ -147,7 +176,7 @@ export function distanceGain(distance: number, near: number, far: number): numbe
 
 /** A sky flypast is deliberately audible much farther away than ground traffic. */
 export function santaGreetingGain(distance: number): number {
-  return distanceGain(distance, 125, 250) * 0.64;
+  return distanceGain(distance, 145, 250) * 0.85;
 }
 
 /** Wait until the sleigh is crossing into the centre of the scene. */
