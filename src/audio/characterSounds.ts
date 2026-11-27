@@ -1,5 +1,5 @@
 /** Original procedural effects, generated once on demand. No recordings or downloads. */
-export const CUB_ROAR_SECONDS = 0.82;
+export const CUB_ROAR_SECONDS = 0.68;
 export const TRAIN_CHUFF_SECONDS = 1.2;
 export const TRAIN_WHISTLE_SECONDS = 1.65;
 export const SANTA_LAUGH_SECONDS = 1.55;
@@ -34,34 +34,39 @@ function normalize(samples: Float32Array, peak: number): Float32Array {
   return samples;
 }
 
-/** Breathy onset, rough vocal pulses, open vowel and softer rounded ending.
- * Formants and irregular rasp replace the previous low buzzing sawtooth. */
+/** Playful little "rrr-RAOW": a short purr-like onset opens into a smiling
+ * voiced vowel, then rounds off. Mostly pitched, not the broadband rasp of an adult lion. */
 export function createCubRoar(rate: number): Float32Array {
   const samples = new Float32Array(Math.round(rate * CUB_ROAR_SECONDS));
   const noise = noiseGenerator(751);
-  const throat = resonator(rate, 740, 230);
-  const mouth = resonator(rate, 1360, 360);
-  const rounded = resonator(rate, 510, 180);
-  const rasp = resonator(rate, 2450, 1000);
-  let phase = 0, previous = 0, slow = 0;
+  const breathFilter = resonator(rate, 1800, 1100);
+  let phase = 0;
+  const bell = (x: number, center: number, width: number) =>
+    Math.exp(-0.5 * ((x - center) / width) ** 2);
   for (let i = 0; i < samples.length; i++) {
     const t = i / rate;
-    const n = noise();
-    slow += (n - slow) * 0.018;
-    const pitch = (315 + 48 * smooth(t / 0.18) - 115 * smooth((t - 0.26) / 0.5)) *
-      (1 + 0.045 * Math.sin(t * tau * 31) + 0.18 * slow);
-    phase = (phase + pitch / rate) % 1;
-    const pulse = Math.pow(Math.sin(Math.PI * phase), 3);
-    const glottal = pulse - previous;
-    previous = pulse;
-    const rough = glottal * 5 * (1 + 0.28 * Math.sin(t * tau * 43)) + n * (0.24 + pulse * 0.42);
-    const open = smooth(t / 0.15) * (1 - smooth((t - 0.44) / 0.32));
-    const voice = throat(rough) * (0.6 + open * 0.4) + mouth(rough) * open * 0.65 +
-      rounded(rough) * (1 - open) * 0.4 + rasp(n) * 0.16;
-    const env = smooth(t / 0.065) * (1 - smooth((t - 0.47) / 0.35));
-    samples[i] = Math.tanh(voice * 1.1) * env;
+    const opening = smooth((t - 0.07) / 0.19);
+    const rounding = smooth((t - 0.36) / 0.24);
+    const purr = 1 - smooth(t / 0.20);
+    // A small rising greeting, then a warm, rounded falling "ow".
+    const pitch = 290 + 110 * smooth(t / 0.25) - 88 * smooth((t - 0.33) / 0.35);
+    phase += tau * pitch * (1 + 0.009 * Math.sin(tau * 6.5 * t) + purr * 0.016 * Math.sin(tau * 27 * t)) / rate;
+    const f1 = 620 + opening * 300 - rounding * 380;
+    const f2 = 1420 + opening * 270 - rounding * 560;
+    let voice = 0;
+    // Gentle vocal harmonics, not a sawtooth. The vowel changes continuously.
+    for (let k = 1; k <= 10; k++) {
+      const hz = k * pitch;
+      const weight = (0.16 + 0.85 * bell(hz, f1, 250) +
+        0.50 * bell(hz, f2, 370) + 0.12 * bell(hz, 2600, 550)) / Math.pow(k, 0.85);
+      voice += Math.sin(k * phase) * weight;
+    }
+    const trill = 1 - purr * 0.16 * (0.5 + 0.5 * Math.sin(tau * 29 * t));
+    const breath = breathFilter(noise()) * (0.026 + purr * 0.045);
+    const env = smooth(t / 0.065) * (0.58 + 0.42 * opening) * (1 - smooth((t - 0.43) / 0.25));
+    samples[i] = (voice * trill + breath) * env;
   }
-  return normalize(samples, 0.64);
+  return normalize(samples, 0.58);
 }
 
 /** Four gentle, alternating steam exhaust bursts per loop. */

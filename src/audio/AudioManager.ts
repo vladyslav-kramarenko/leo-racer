@@ -76,7 +76,7 @@ export class AudioManager {
     this.roarBuffer ??= this.makeSound(ctx, createCubRoar);
     this.roarUntil = ctx.currentTime + this.roarBuffer.duration + 0.1;
     const gain = ctx.createGain();
-    gain.gain.value = 0.48;
+    gain.gain.value = 0.34;
     gain.connect(this.master);
     const source = this.playBuffer(ctx, this.roarBuffer, gain);
     source.onended = () => { source.disconnect(); gain.disconnect(); };
