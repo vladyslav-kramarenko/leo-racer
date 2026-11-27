@@ -7,6 +7,8 @@
 
 Leo Racer is a browser driving toy for children aged 2–4.
 
+Tap Leo on the welcome screen for a little bounce and a friendly, synthesized cub roar. Start Driving remains the separate action to begin the game.
+
 - **Always moving:** the yellow school bus is always driving.
 - **Instant control:** the child takes the wheel at any moment, with keyboard, a real steering wheel, or a tablet tilted like a wheel.
 - **Can't fail:** there are no crashes, no game over and no way off the road.

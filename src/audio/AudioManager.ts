@@ -29,29 +29,84 @@ export class AudioManager {
   private eventInterval: [number, number] = [3, 8];
   private hornUntil = Array<number>(HORNS.length).fill(0);
   private zoomUntil = 0;
+  private roarUntil = 0;
   private baseHz = 52;
   private whiteNoise: AudioBuffer | null = null;
   private waveNoise: AudioBuffer | null = null;
 
+  /** Unlock only the audio output on a user gesture; no engine or ambience yet. */
+  private unlock(): AudioContext | null {
+    if (!this.ctx) {
+      try {
+        const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!Ctx) return null;
+        const ctx = new Ctx();
+        this.ctx = ctx;
+        this.master = ctx.createGain();
+        this.master.gain.value = 0;
+        this.master.connect(ctx.destination);
+        this.applyVolume();
+      } catch {
+        this.ctx = null;
+        this.master = null;
+        return null;
+      }
+    }
+    void this.ctx.resume().catch(() => { /* Audio may be blocked by the browser. */ });
+    return this.ctx;
+  }
+
+  /** A gentle, short, synthesised cub-like "rawr". No engine sounds before Start. */
+  mascotRoar(): void {
+    if (!this.enabled) return;
+    const ctx = this.unlock();
+    const out = this.master;
+    if (!ctx || !out) return;
+    const now = ctx.currentTime;
+    if (now < this.roarUntil) return;
+    this.roarUntil = now + 0.65;
+
+    const voice = ctx.createOscillator();
+    voice.type = 'sawtooth';
+    voice.frequency.setValueAtTime(175, now);
+    voice.frequency.exponentialRampToValueAtTime(245, now + 0.14);
+    voice.frequency.exponentialRampToValueAtTime(155, now + 0.46);
+    const formant = ctx.createBiquadFilter();
+    formant.type = 'lowpass';
+    formant.frequency.setValueAtTime(650, now);
+    formant.frequency.linearRampToValueAtTime(1050, now + 0.15);
+    formant.frequency.linearRampToValueAtTime(430, now + 0.5);
+    const tremolo = ctx.createOscillator();
+    tremolo.frequency.value = 23;
+    const depth = ctx.createGain();
+    depth.gain.value = 9;
+    tremolo.connect(depth).connect(voice.frequency);
+    voice.connect(formant);
+    envelope(ctx, voice, out, now, 0.12, 0.055, 0.42, formant);
+    tremolo.start(now);
+    tremolo.stop(now + 0.52);
+
+    this.whiteNoise ??= createWhiteNoise(ctx, 1);
+    const breath = ctx.createBufferSource();
+    breath.buffer = this.whiteNoise;
+    const band = ctx.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.value = 800;
+    band.Q.value = 0.7;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.025, now + 0.08);
+    gain.gain.linearRampToValueAtTime(0, now + 0.46);
+    breath.connect(band).connect(gain).connect(out);
+    breath.start(now);
+    breath.stop(now + 0.5);
+  }
+
   /** Must be called from a user gesture (START DRIVING). */
   start(preset: AudioPreset): void {
-    if (this.ctx) {
-      void this.ctx.resume();
-      return;
-    }
-    try {
-      const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!Ctx) return;
-      this.ctx = new Ctx();
-    } catch {
-      this.ctx = null;
-      return;
-    }
-    const ctx = this.ctx;
+    const ctx = this.unlock();
+    if (!ctx || !this.master || this.engineOsc.length) return;
     this.baseHz = preset.engineBaseHz;
-    this.master = ctx.createGain();
-    this.master.gain.value = 0;
-    this.master.connect(ctx.destination);
 
     // Engine: soft and low — present, but not a drone. Oscillators → low-pass → gentle
     // "chug" (pulse, multiplied) → level (so a parked bus is truly silent).

@@ -71,6 +71,27 @@ test('page loads with the start screen', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('Leo reacts to taps without starting the game', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/');
+  const mascot = page.getByTestId('leo-mascot-button');
+  await mascot.evaluate((el) => {
+    el.setAttribute('data-reactions', '0');
+    el.addEventListener('animationstart', () => el.setAttribute('data-reactions', String(Number(el.getAttribute('data-reactions')) + 1)));
+  });
+  await mascot.click();
+  await expect(mascot).toHaveAttribute('data-reactions', '1');
+  await expect(page.getByTestId('start-screen')).toBeVisible();
+  expect((await state(page)).driving).toBe(false);
+  await expect(mascot).not.toHaveClass(/reacting/);
+  await mascot.click();
+  await expect(mascot).toHaveAttribute('data-reactions', '2');
+  await page.getByTestId('start-button').click();
+  await expect(page.getByTestId('start-screen')).toBeHidden();
+  expect((await state(page)).driving).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('parent world selection resumes driving while entrance selection keeps the start screen', async ({ page }) => {
   test.setTimeout(120_000);
   const errors = trackErrors(page);

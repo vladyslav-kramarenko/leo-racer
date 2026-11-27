@@ -233,7 +233,7 @@ async function main(): Promise<void> {
     const start = new StartScreen((fullscreen) => {
       startDriving(fullscreen);
       start.hide();
-    }, { worlds: listPresets(), currentId: preset.id, onSelect: selectWorld });
+    }, { worlds: listPresets(), currentId: preset.id, onSelect: selectWorld }, () => audio.mascotRoar());
     start.mount(root);
   }
 

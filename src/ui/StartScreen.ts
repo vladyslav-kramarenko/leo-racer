@@ -9,7 +9,7 @@ export class StartScreen {
     worlds: readonly WorldOption[];
     currentId: string;
     onSelect: (id: string) => void;
-  }) {
+  }, onMascot: () => void) {
     const start = h(
       'button',
       { class: 'start-button', type: 'button', 'data-testid': 'start-button' },
@@ -19,13 +19,24 @@ export class StartScreen {
     start.addEventListener('click', () => onStart(false));
     fullscreen.addEventListener('click', () => onStart(true));
 
+    const mascot = h('button', { type: 'button', class: 'leo-mascot-button', 'aria-label': 'Say hello to Leo', 'data-testid': 'leo-mascot-button' },
+      h('img', { class: 'leo-mascot', src: '/images/leo-mascot.webp', alt: '', width: 320, height: 213, 'data-testid': 'leo-mascot', draggable: 'false' }));
+    mascot.addEventListener('click', () => {
+      // Restart visual feedback for every tap, even when the sound is rate-limited.
+      mascot.classList.remove('reacting');
+      void mascot.offsetWidth;
+      mascot.classList.add('reacting');
+      onMascot();
+    });
+    mascot.addEventListener('animationend', () => mascot.classList.remove('reacting'));
+
     this.el = h(
       'div',
       { class: 'start-screen', 'data-testid': 'start-screen' },
       h('section', { class: 'start-worlds' }, createWorldPicker(picker.worlds, picker.currentId, picker.onSelect)),
       h('div', { class: 'start-content' },
         h('div', { class: 'start-brand' },
-          h('img', { class: 'leo-mascot', src: '/images/leo-mascot.webp', alt: '', width: 320, height: 213, 'data-testid': 'leo-mascot', draggable: 'false' }),
+          mascot,
           h('h1', { class: 'title' }, 'LEO RACER'),
         ),
         start, fullscreen,
