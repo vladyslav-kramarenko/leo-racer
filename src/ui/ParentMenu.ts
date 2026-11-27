@@ -33,6 +33,7 @@ export interface ParentMenuHost {
   trafficDensity(): TrafficDensity;
   setTrafficDensity(density: TrafficDensity): void;
   tiltStatus(): TiltStatus;
+  tiltSignal(): string;
   setTiltEnabled(enabled: boolean): Promise<TiltStatus>;
   recenterTilt(): void;
   isTiltInverted(): boolean;
@@ -159,14 +160,16 @@ export class ParentMenu {
     horn.addEventListener('change', () => host.setDefaultHorn(Number(horn.value)));
 
     // --- Tilt
-    const tiltStatus = h('span', { class: 'hint' });
+    const tiltStatus = h('span', { class: 'hint', 'data-testid': 'tilt-signal' });
     const tiltButton = h('button', { type: 'button', class: 'toggle', 'data-testid': 'tilt-toggle' });
     const renderTilt = (status: TiltStatus) => {
       tiltButton.textContent = status === 'on' ? 'On' : 'Off';
       tiltButton.setAttribute('aria-pressed', String(status === 'on'));
-      tiltStatus.textContent = status === 'unavailable' ? 'Tilt is not available on this device or was not allowed.' : '';
+      tiltStatus.textContent = status === 'unavailable' ? 'Tilt is not available on this device or was not allowed.' : host.tiltSignal();
     };
     renderTilt(host.tiltStatus());
+    const tiltTimer = setInterval(() => renderTilt(host.tiltStatus()), 250);
+    this.cleanup = () => clearInterval(tiltTimer);
     tiltButton.addEventListener('click', async () => renderTilt(await host.setTiltEnabled(host.tiltStatus() !== 'on')));
 
     const worlds = createWorldPicker(host.worlds(), host.currentWorld(), (id) => host.selectWorld(id));
@@ -196,7 +199,7 @@ export class ParentMenu {
         {},
         h('h3', {}, 'Steering'),
         button('Calibrate Wheel', () => this.show(this.screens.calibrateWheel), 'calibrate-button'),
-        row('Tilt steering (tablet)', tiltButton),
+        row('Tilt steering (phone / tablet)', tiltButton),
         tiltStatus,
         h(
           'div',

@@ -73,7 +73,8 @@ export class InputManager implements SteeringInput {
     // Tilt is noisier than a wheel, so it needs a bigger, accumulated change to take over.
     const tilt = this.tilt.getSteering();
     const tiltMoved = Math.abs(tilt - this.tiltAnchor) > CONFIG.tilt.activityThreshold;
-    if (tiltMoved) this.tiltAnchor = tilt;
+    if (!this.tilt.hasSignal()) this.tiltAnchor = 0;
+    else if (tiltMoved) this.tiltAnchor = tilt;
 
     // Braking never steals steering, but it is still recorded as device use.
     if (this.keyboard.isBraking() || this.keyboard.isAccelerating()) this.used.add('keyboard');
@@ -83,7 +84,7 @@ export class InputManager implements SteeringInput {
     // Whichever device was touched most recently owns steering.
     if (this.keyboard.consumeKeyEvent() || this.keyboard.isHeld()) this.setSource('keyboard');
     else if (padMoved) this.setSource('gamepad');
-    else if (tiltMoved) this.setSource('tilt');
+    else if (this.tilt.hasSignal() && tiltMoved) this.setSource('tilt');
     else if (this.source === 'none' && this.gamepad.getConnected()) this.source = 'gamepad';
   }
 
@@ -118,7 +119,8 @@ export class InputManager implements SteeringInput {
    * the value has stopped changing. Wheel and tilt activity are detected from changes only.
    */
   isHeldActive(): boolean {
-    return (this.source === 'keyboard' && this.keyboard.isHeld()) || this.isBraking();
+    return (this.source === 'keyboard' && this.keyboard.isHeld()) ||
+      (this.source === 'tilt' && this.tilt.hasSignal() && Math.abs(this.tilt.getSteering()) > CONFIG.tilt.activityThreshold) || this.isBraking();
   }
 
   getSource(): InputSource {

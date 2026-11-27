@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { angleDiff, gravityFromEuler, tiltAngleDeg, tiltToSteering, toScreen } from '../../src/input/TiltInput';
+import { describe, expect, it, vi } from 'vitest';
+import { angleDiff, gravityFromEuler, tiltAngleDeg, tiltToSteering, toScreen, motionGravity, tiltFromGravity, TiltInput, resolveScreenAngle, calibratedScreenAngle } from '../../src/input/TiltInput';
 import { isInZone } from '../../src/input/TouchBrake';
 
 const cfg = { deadZoneDeg: 4, fullLockDeg: 28 };
@@ -85,5 +85,89 @@ describe('touch brake zone', () => {
     expect(isInZone({ clientY: 720 }, el, 0.28)).toBe(true);
     expect(isInZone({ clientY: 500 }, el, 0.28)).toBe(false);
     expect(isInZone({ clientY: 30 }, el, 0.28)).toBe(false);
+  });
+});
+
+describe('motion fallback and live sensor lifecycle', () => {
+  it('maps standard accelerometer gravity to the same screen steering', () => {
+    const g = motionGravity(-3.35, 9.21, 0)!;
+    expect(tiltFromGravity(g.gx, g.gy, 0)).toBeCloseTo(20, 0);
+    expect(motionGravity(0, 0, 0)).toBeNull();
+    expect(motionGravity(NaN, 0, 9.8)).toBeNull();
+  });
+
+  it('requests both permissions, falls back to motion, resets on screen rotation and ignores stale data', async () => {
+    const target = new EventTarget();
+    const orientation = { requestPermission: vi.fn(async () => 'granted') };
+    const motion = { requestPermission: vi.fn(async () => 'granted') };
+    const display = { orientation: { angle: 0 } };
+    let now = 0;
+    vi.stubGlobal('window', Object.assign(target, { DeviceOrientationEvent: orientation, DeviceMotionEvent: motion }));
+    vi.stubGlobal('DeviceOrientationEvent', orientation);
+    vi.stubGlobal('DeviceMotionEvent', motion);
+    vi.stubGlobal('screen', display);
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const tilt = new TiltInput();
+    const send = (x: number, y: number, z: number) =>
+      target.dispatchEvent(Object.assign(new Event('devicemotion'), { accelerationIncludingGravity: { x, y, z } }));
+    try {
+      const enabled = tilt.enable();
+      expect(orientation.requestPermission).toHaveBeenCalledOnce();
+      expect(motion.requestPermission).toHaveBeenCalledOnce();
+      expect(await enabled).toBe(true);
+      expect(tilt.hasSignal()).toBe(false);
+      send(0, 9.8, 0);
+      now = 50;
+      send(-3.35, 9.21, 0);
+      tilt.update(200);
+      expect(tilt.getSignalSource()).toBe('motion');
+      expect(tilt.getSteering()).toBeGreaterThan(0.4);
+      display.orientation.angle = 90;
+      now = 100;
+      send(9.8, 0, 0);
+      tilt.update(200);
+      expect(tilt.getSteering()).toBe(0);
+      now = 200;
+      target.dispatchEvent(Object.assign(new Event('deviceorientation'), { beta: 0, gamma: -90 }));
+      expect(tilt.getSignalSource()).toBe('orientation');
+      now = 2000;
+      tilt.update(16);
+      expect(tilt.getSignalSource()).toBeNull();
+      expect(tilt.getSteering()).toBe(0);
+    } finally {
+      tilt.disable();
+      clock.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe('iOS screen axes', () => {
+  it('prefers the physical legacy orientation on permission-based devices', () => {
+    expect(resolveScreenAngle(90, -90, true)).toBe(270);
+    expect(resolveScreenAngle(0, 90, true)).toBe(90);
+    expect(resolveScreenAngle(90, -90, false)).toBe(90);
+    expect(resolveScreenAngle(undefined, -90, false)).toBe(270);
+  });
+
+  it('corrects a quarter-turn or reversed axis only at neutral', () => {
+    expect(calibratedScreenAngle(-1, 0, 0)).toBe(90);
+    expect(calibratedScreenAngle(1, 0, 90)).toBe(270);
+    expect(calibratedScreenAngle(0, -1, 90)).toBe(0);
+    expect(calibratedScreenAngle(-0.2, 0, 0)).toBe(0);
+    expect(calibratedScreenAngle(-0.9, -0.3, 90)).toBe(90);
+  });
+
+  it.each([0, 90, 270])('pitch is neutral and wheel rotation is steering at screen angle %i', (angle) => {
+    const a = angle * Math.PI / 180;
+    const toDevice = (sx: number, sy: number) => ({ gx: sx * Math.cos(a) + sy * Math.sin(a), gy: -sx * Math.sin(a) + sy * Math.cos(a) });
+    for (const down of [0.3, 0.7, 1]) {
+      const g = toDevice(0, -down);
+      expect(tiltFromGravity(g.gx, g.gy, angle)).toBeCloseTo(0);
+    }
+    const right = toDevice(Math.sin(Math.PI / 6), -Math.cos(Math.PI / 6));
+    const left = toDevice(-Math.sin(Math.PI / 6), -Math.cos(Math.PI / 6));
+    expect(tiltFromGravity(right.gx, right.gy, angle)).toBeCloseTo(30);
+    expect(tiltFromGravity(left.gx, left.gy, angle)).toBeCloseTo(-30);
   });
 });
