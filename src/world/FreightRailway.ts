@@ -69,6 +69,13 @@ export class FreightRailway {
 
   isTrainRunning(): boolean { return this.lead !== null; }
 
+  /** Distance to the actual locomotive, not the caboose or road centre. */
+  soundDistance(focus: THREE.Vector3): number {
+    if (this.lead === null) return Infinity;
+    const point = this.road.point(this.lead, this.cfg.offset, this.point);
+    return Math.hypot(point.x - focus.x, point.z - focus.z);
+  }
+
   update(dt: number, progress: number): void {
     if (dt <= 0) return;
     this.time += dt;

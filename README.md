@@ -174,3 +174,5 @@ There is no open-source license yet: all rights reserved.
 Third-party components are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). All 3D models, textures and sounds are original and procedurally generated.
 
 **Nature weather:** a gentle first shower after 15 seconds of active driving, followed by a rainbow. Later showers occur after 60–120 seconds of clear weather, with a 50% rainbow chance. Weather is cosmetic only, uses a small particle pool, respects pause and sound settings, and never changes steering or road grip.
+
+**Character sounds:** Leo's welcome-screen roar uses a rough vocal-formant synthesis. In Sea to Sky the steam locomotive chuffs and gives a double whistle once per pass; Winter's Santa greets the player with three rounded laugh syllables. All sounds are locally generated, respect mute, and fade with distance and pause where applicable.
