@@ -59,7 +59,7 @@ Leo Racer is a browser driving toy for children aged 2–4.
   - A drawing that MOVES drives in a lane or alongside the road.
   - Each drawing has a frequency: Rare, Normal or Often.
 - **Play-time limit:** Unlimited, or 5, 10, 15, 20 or 30 min. At the limit, the bus pulls over and stops softly, the engine fades, and the screen says "ALL DONE!". Only a parent can start another session.
-- **Parent Menu:** hold `Esc` for 2 s or long-press the top-left corner. It has drawings, wheel calibration, tilt, play time, traffic, world, sound, fullscreen, diagnostics with export, and the privacy note.
+- **Parent Menu:** hold `Esc` for 2 s or hold the top-left **Parents · Hold 2s** control until its progress ring fills. It has drawings, wheel calibration, tilt, play time, traffic, world, sound, fullscreen, diagnostics with export, and the privacy note.
 - **Local-only diagnostics:** nothing is sent anywhere.
 
 ## Controls
@@ -82,7 +82,7 @@ The wheel can shift through five forward gears. Defaults are button 5 for up and
 | Child  | Brake (hold; release to go on) | `↓` / `S`           | Calibrated brake pedal | Press the bottom of the screen  |
 | Child  | Speed boost (hold)            | `↑` / `W`: 3×       | Accelerator: 1.5×–3× | —                               |
 | Child  | Horn                           | `Space` / `H`       | Any button        | Tap above the brake zone (except parent corner) |
-| Parent | Parent Menu                    | Hold `Esc` 2 s      | —                 | Long-press the top-left corner  |
+| Parent | Parent Menu                    | Hold `Esc` 2 s      | —                 | Hold Parents for 2 s          |
 
 ## Browser support and tested hardware
 

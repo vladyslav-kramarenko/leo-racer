@@ -298,6 +298,29 @@ test('parent menu opens after holding ESC for ~2 seconds', async ({ page }) => {
   expect((await state(page)).paused).toBe(false);
 });
 
+test('visible parent control requires a continuous hold', async ({ page }) => {
+  await startDriving(page);
+  const trigger = page.getByTestId('parent-trigger');
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toContainText('Hold 2s');
+  await trigger.click();
+  await expect(page.getByTestId('parent-menu')).toBeHidden();
+  const box = (await trigger.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await expect(trigger).toHaveClass(/holding/);
+  await page.mouse.move(box.x + box.width + 50, box.y + box.height + 50);
+  await expect(trigger).not.toHaveClass(/holding/);
+  await page.mouse.up();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await expect(trigger).toHaveClass(/holding/);
+  await expect(page.getByTestId('parent-menu')).toBeVisible({ timeout: 6000 });
+  await page.mouse.up();
+  await page.getByTestId('resume-button').click();
+  await expect(page.getByTestId('parent-menu')).toBeHidden();
+});
+
 test('a short ESC tap does not open the menu', async ({ page }) => {
   await startDriving(page);
   await page.keyboard.press('Escape');

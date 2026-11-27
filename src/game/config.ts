@@ -126,7 +126,7 @@ export const CONFIG = {
 
   parentMenu: {
     holdMs: 2000,
-    /** Size of the hidden long-press corner, px. */
+    /** Size of the legacy long-press corner, px. */
     cornerSize: 72,
   },
 

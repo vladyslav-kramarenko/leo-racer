@@ -258,63 +258,93 @@ export class ParentMenu {
  */
 export class ParentGesture {
   private timer: ReturnType<typeof setTimeout> | null = null;
-  private readonly ring: HTMLElement;
+  private readonly button: HTMLButtonElement;
+  private pointer: { id: number; x: number; y: number } | null = null;
+  private keyboardHold = false;
 
   constructor(
     private readonly menu: ParentMenu,
     private readonly holdMs: number = CONFIG.parentMenu.holdMs,
   ) {
-    this.ring = h('div', { class: 'hold-ring hidden', 'aria-hidden': 'true' });
-    this.ring.style.setProperty('--hold-ms', `${holdMs}ms`);
+    const seconds = holdMs / 1000;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 36 36');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.classList.add('parent-hold-ring');
+    for (const cls of ['track', 'progress']) {
+      const circle = document.createElementNS(svg.namespaceURI, 'circle');
+      circle.setAttribute('cx', '18');
+      circle.setAttribute('cy', '18');
+      circle.setAttribute('r', '15');
+      circle.setAttribute('pathLength', '100');
+      circle.setAttribute('class', cls);
+      svg.append(circle);
+    }
+    this.button = h('button', {
+      type: 'button', class: 'parent-trigger', 'data-testid': 'parent-trigger',
+      'aria-label': `Parent menu: hold for ${seconds} seconds, or hold Escape`,
+      title: `Hold for ${seconds} seconds · Esc also works`,
+    }, h('span', { class: 'parent-trigger-icon' }, svg, h('span', { 'aria-hidden': 'true', class: 'parent-gear' }, '⚙')),
+    h('span', { class: 'parent-trigger-label' }, h('span', {}, 'Parents'), h('small', {}, `Hold ${seconds}s`)));
+    this.button.style.setProperty('--hold-ms', `${holdMs}ms`);
   }
 
   attach(root: HTMLElement): void {
-    root.append(this.ring);
+    root.append(this.button);
+    this.button.addEventListener('contextmenu', (e) => e.preventDefault());
+    this.button.addEventListener('click', (e) => e.preventDefault());
 
     window.addEventListener('keydown', (e) => {
-      if (e.key !== 'Escape') return;
-      if (this.menu.isOpen()) {
+      if (e.key === 'Escape' && this.menu.isOpen()) {
         if (!e.repeat) this.menu.back();
         return;
       }
-      if (!e.repeat) this.begin();
+      const buttonKey = e.target === this.button && (e.key === ' ' || e.key === 'Enter');
+      if (e.key !== 'Escape' && !buttonKey) return;
+      if (buttonKey) e.preventDefault();
+      if (!e.repeat && !this.menu.isOpen() && !this.pointer) {
+        this.keyboardHold = true;
+        this.begin();
+      }
     });
     window.addEventListener('keyup', (e) => {
-      if (e.key === 'Escape') this.cancel();
+      if (this.keyboardHold && (e.key === 'Escape' || e.key === ' ' || e.key === 'Enter')) this.cancel();
     });
     window.addEventListener('blur', () => this.cancel());
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this.cancel(); });
 
     const size = CONFIG.parentMenu.cornerSize;
     root.addEventListener('pointerdown', (e) => {
-      if (this.menu.isOpen()) return;
-      if (e.clientX <= size && e.clientY <= size) this.begin();
+      if (this.menu.isOpen() || this.pointer || this.keyboardHold || e.button !== 0) return;
+      if (!this.button.contains(e.target as Node) && !(e.clientX <= size && e.clientY <= size)) return;
+      this.pointer = { id: e.pointerId, x: e.clientX, y: e.clientY };
+      this.begin();
     });
-    for (const type of ['pointerup', 'pointercancel', 'pointerleave'] as const) {
-      root.addEventListener(type, () => this.cancel());
+    window.addEventListener('pointermove', (e) => {
+      const p = this.pointer;
+      if (p?.id === e.pointerId && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 20) this.cancel();
+    });
+    for (const type of ['pointerup', 'pointercancel'] as const) {
+      window.addEventListener(type, (e) => { if (this.pointer?.id === e.pointerId) this.cancel(); });
     }
+    root.addEventListener('pointerleave', (e) => { if (this.pointer?.id === e.pointerId) this.cancel(); });
   }
 
   private begin(): void {
-    this.cancel();
-    this.ring.classList.remove('hidden');
-    // Restart the CSS progress animation.
-    void this.ring.offsetWidth;
-    this.ring.classList.add('holding');
+    this.button.classList.remove('holding');
+    void this.button.offsetWidth;
+    this.button.classList.add('holding');
     this.timer = setTimeout(() => {
-      this.timer = null;
-      this.hideRing();
+      this.cancel();
       this.menu.open();
     }, this.holdMs);
   }
 
   private cancel(): void {
-    if (this.timer) clearTimeout(this.timer);
+    if (this.timer !== null) clearTimeout(this.timer);
     this.timer = null;
-    this.hideRing();
-  }
-
-  private hideRing(): void {
-    this.ring.classList.remove('holding');
-    this.ring.classList.add('hidden');
+    this.pointer = null;
+    this.keyboardHold = false;
+    this.button.classList.remove('holding');
   }
 }
